@@ -3,7 +3,7 @@ from functools import partial
 import numpy as np
 from scipy.interpolate import interp1d
 
-from polars.polar import rho_water
+from forces.polars.polar import rho_water
 from scipy.optimize import curve_fit
 import matplotlib
 
@@ -163,10 +163,8 @@ def a1(Fn):
 
 def a2(Fn):
     return np.interp(Fn, coeffs["Fn"], coeffs["a2"])
-    interpolator = interp1d(
-        coeffs["Fn"], coeffs["a2"], kind="linear", fill_value="extrapolate"
-    )
-    return interpolator(Fn)
+    # interpolator = interp1d(coeffs["Fn"], coeffs["a2"], kind="linear", fill_value="extrapolate")
+    # return interpolator(Fn)
 
 
 def a3(Fn):

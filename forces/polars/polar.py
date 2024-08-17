@@ -3,10 +3,8 @@ import pandas as pd
 import os
 from pathlib import Path
 import numpy as np
-import matplotlib
 
-matplotlib.use("WebAgg")
-import matplotlib.pyplot as plt
+POLAR_ROOT = Path(__file__).parent
 
 
 def knts_to_ms(knts):
@@ -26,6 +24,10 @@ def air_re(v, l):
 rho_air = 1.27
 rho_water = 1000
 
+alphas_by_re = dict()
+cd_by_re = dict()
+cl_by_re = dict()
+
 
 class Polar:
     def __init__(self, dir: str | None):
@@ -34,7 +36,7 @@ class Polar:
             self.alpha_max = 0
         else:
             dfs = []
-            for f in glob.glob(os.path.join(dir, "*.csv")):
+            for f in glob.glob(os.path.join(POLAR_ROOT, dir, "*.csv")):
                 stem = Path(f).stem
                 (
                     _xf,
@@ -43,12 +45,15 @@ class Polar:
                     re,
                     _ncsv,
                 ) = stem.split("-")
+                re = int(re)
                 data = pd.read_csv(f, header=9)
-                data["re"] = float(re)
-                dfs.append(data)
-            self.data = pd.concat(dfs, axis=0)
-            self.alpha_min = self.data["Alpha"].min()
-            self.alpha_max = self.data["Alpha"].max()
+                alphas_by_re[re] = np.array(data["Alpha"]).astype(np.float32)
+                cd_by_re[re] = np.array(data["Cd"]).astype(np.float32)
+                cl_by_re[re] = np.array(data["Cl"]).astype(np.float32)
+
+            self.all_re = np.array(list(alphas_by_re.keys()))
+            self.alpha_min = np.max([np.min(alphas) for alphas in alphas_by_re.values()])
+            self.alpha_max = np.min([np.max(alphas) for alphas in alphas_by_re.values()])
 
     def cd0(self, re: int):
         return self.cd(re, 0)
@@ -59,20 +64,17 @@ class Polar:
             return 1 - np.cos(np.deg2rad(alpha_deg) * 2)
 
         re = self.nearest_re(re)
-        at_re = self.data[self.data["re"] == re]
-        return np.interp(alpha_deg, at_re["Alpha"], at_re["Cd"])
+        return np.interp(alpha_deg, alphas_by_re[re], cd_by_re[re])
 
     def cl(self, re: int, alpha_deg):
         if alpha_deg <= self.alpha_min or alpha_deg >= self.alpha_max:
             return np.sin(np.deg2rad(alpha_deg) * 2)
 
         re = self.nearest_re(re)
-        at_re = self.data[self.data["re"] == re]
-        return np.interp(alpha_deg, at_re["Alpha"], at_re["Cl"])
+        return np.interp(alpha_deg, alphas_by_re[re], cl_by_re[re])
 
     def nearest_re(self, re: int):
-        all_re = self.data["re"].unique()
-        return all_re[np.argmin(np.abs(all_re - re))]
+        return self.all_re[np.argmin(np.abs(self.all_re - re))]
 
 
 if __name__ == "__main__":

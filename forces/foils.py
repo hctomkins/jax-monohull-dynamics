@@ -1,6 +1,6 @@
-from polars.polar import Polar
+from forces.polars.polar import Polar
 import numpy as np
-from polars.polar import rho_water, water_re
+from forces.polars.polar import rho_water, water_re
 
 
 class Foil:
@@ -26,6 +26,9 @@ class Foil:
         Returns:
             Resultant force vector in foil reference frame (foil pointing left)
         """
+        if np.linalg.norm(foil_frame_flow) < 1e-3:
+            return np.array([0, 0])
+
         alpha = np.arctan2(
             foil_frame_flow[1], -foil_frame_flow[0]
         )  # clockwise from -ve x axis
@@ -52,8 +55,8 @@ class Foil:
             * self.area
             * np.linalg.norm(foil_frame_flow) ** 2
         )
-        print(
-            f"alpha: {alpha_deg}, fl: {np.linalg.norm(lift)}, fd: {np.linalg.norm(drag)}"
-        )
+        # print(
+        #     f"foil alpha: {alpha_deg}, fl: {np.linalg.norm(lift)}, fd: {np.linalg.norm(drag)}"
+        # )
 
         return lift + drag

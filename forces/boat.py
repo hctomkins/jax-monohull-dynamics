@@ -4,8 +4,7 @@ from forces.sails import MainSail
 from forces.hull import HullDragEstimator
 import numpy as np
 
-
-class Boat:
+class BoatPhysics:
     def __init__(
         self,
         centreboard_length: float,
@@ -19,11 +18,11 @@ class Boat:
         length: float,
         sail_coe_dist: float,
     ):
-        self.board = Foil(centreboard_length, centreboard_chord, "polars/n12")
-        self.rudder = Foil(rudder_length, rudder_chord, "polars/n12")
+        self.board = Foil(centreboard_length, centreboard_chord, "n12")
+        self.rudder = Foil(rudder_length, rudder_chord, "n12")
         self.sail = MainSail(sail_area)
         self.hull_drag = HullDragEstimator(hull_draft, beam, lwl)
-        self.virtual_damper_foil = Foil(rudder_length, rudder_length, "polars/n12")
+        self.virtual_damper_foil = Foil(rudder_length, rudder_length, "n12")
 
         # offsets assuming boat is pointing right and origin is at the centre of the boat
         self.board_offset = (0, 0)
@@ -32,7 +31,7 @@ class Boat:
         self.sail_coe_dist = sail_coe_dist
         self.damper_offset = (length / 2, 0)
 
-    def forces(
+    def forces_and_moments(
         self,
         boat_velocity: tuple[float, float],
         wind_velocity: tuple[float, float],
@@ -62,56 +61,99 @@ class Boat:
             foil_coe=0,
         )
 
+        # Rudder
+        rudder_flow = flow_at_foil(
+            flow_velocity=tide,
+            boat_velocity=boat_velocity,
+            foil_offset=self.rudder_offset,
+            foil_theta=rudder_angle,
+            foil_coe=self.rudder.chord / 2,
+            boat_theta=boat_theta,
+            boat_theta_dot=boat_theta_dot,
+        )
+        rudder_local_force = self.rudder.foil_frame_resultant(rudder_flow)
+        rudder_force, rudder_moment = foil_force_on_boat(
+            foil_force=rudder_local_force,
+            foil_offset=self.rudder_offset,
+            foil_theta=rudder_angle,
+            boat_theta=boat_theta,
+            foil_coe=0,
+        )
+        # Damper
+        damper_flow = flow_at_foil(
+            flow_velocity=tide,
+            boat_velocity=boat_velocity,
+            foil_offset=self.damper_offset,
+            foil_theta=0,
+            foil_coe=self.virtual_damper_foil.chord / 2,
+            boat_theta=boat_theta,
+            boat_theta_dot=boat_theta_dot,
+        )
+        damper_local_force = self.virtual_damper_foil.foil_frame_resultant(damper_flow)
+        _, damper_moment = foil_force_on_boat(
+            foil_force=damper_local_force,
+            foil_offset=self.damper_offset,
+            foil_theta=0,
+            boat_theta=boat_theta,
+            foil_coe=0,
+        )
+
+        # Sail
+        sail_flow = flow_at_foil(
+            flow_velocity=wind_velocity,
+            boat_velocity=boat_velocity,
+            foil_offset=self.mast_offset,
+            foil_theta=sail_angle,
+            foil_coe=self.sail_coe_dist,
+            boat_theta=boat_theta,
+            boat_theta_dot=boat_theta_dot,
+        )
+        sail_local_force = self.sail.sail_frame_resultant(sail_flow)
+        sail_force, sail_moment = foil_force_on_boat(
+            foil_force=sail_local_force,
+            foil_offset=self.mast_offset,
+            foil_theta=sail_angle,
+            boat_theta=boat_theta,
+            foil_coe=0,
+        )
+
+        boat_speed = np.linalg.norm(boat_velocity)
+        hull_drag = self.hull_drag.wave_drag(
+            speed=boat_speed
+        ) + self.hull_drag.viscous_drag(speed=boat_speed)
+        hull_drag = rotate_vector((-hull_drag, 0), boat_theta)
+
+        resultant_force = board_force + rudder_force + sail_force + hull_drag
+        resultant_moment = board_moment + rudder_moment + sail_moment
+        return resultant_force, resultant_moment
+
+
+class FireflyPhysics(BoatPhysics):
+    def __init__(self):
+        super().__init__(
+            centreboard_length=1.05,
+            centreboard_chord=0.25,
+            sail_area=6.3,
+            hull_draft=0.25,
+            rudder_length=1.5,
+            rudder_chord=0.22,
+            beam=1.42,
+            lwl=3.58,
+            length=3.66,
+            sail_coe_dist=1,
+        )
 
 if __name__ == "__main__":
-    print("RUDDER")
-    coe = 0
-    foil_theta = 0  # np.pi / 8 # should produce negative clockwise moment
-    flow = flow_at_foil(
-        flow_velocity=(0, 0),
-        boat_velocity=(1, 0),
-        foil_offset=(-1, 0),
-        foil_theta=foil_theta,
-        foil_coe=coe,
-        boat_theta=0,
-        boat_theta_dot=0,
-    )
-    # print(flow)
-    rudder = Foil(length=1, chord=0.3, polar_dir="polars/n12")
-    force_local = rudder.foil_frame_resultant(flow)
-    print(force_local, "local force")
-    force_global, moment = foil_force_on_boat(
-        foil_force=force_local,
-        foil_offset=(-1, 0),
-        foil_theta=foil_theta,
-        boat_theta=0,
-        foil_coe=coe,
-    )
-    print(force_global, moment, "global rudder force and moment")
-
-    print("Main")
-    coe = 1.5
-    foil_theta = (
-        np.pi / 4
-    )  # with wind from above, should produce some positive anticlockwise moemnt
-    flow = flow_at_foil(
-        flow_velocity=(0, -4),  # 8 knts of wind
-        boat_velocity=(1, 0),  # 2 knots forward
-        foil_offset=(0.5, 0),  # mast is at 0.5, 0
-        foil_theta=foil_theta,
-        foil_coe=coe,
-        boat_theta=0,
-        boat_theta_dot=0,
-    )
-    print(flow, "flow over sail")
-    main = MainSail(area=6.3)
-    force_local = main.sail_frame_resultant(flow)
-    print(force_local, "force in sail space")
-    force_global, moment = foil_force_on_boat(
-        foil_force=force_local,
-        foil_offset=(0.5, 0),
-        foil_theta=foil_theta,
-        boat_theta=0,
-        foil_coe=coe,
-    )
-    print(force_global, moment, "main force and moment")
+    boat = FireflyPhysics()
+    boat_velocity = (1, 0)
+    wind_velocity = (0, 0)
+    boat_theta = 0
+    boat_theta_dot = 0
+    sail_angle = 0
+    rudder_angle = 0
+    import time
+    t0 = time.time()
+    N = 10000
+    for i in range(N):
+        boat.forces_and_moments(boat_velocity, wind_velocity, boat_theta, boat_theta_dot, sail_angle, rudder_angle)
+    print(f"Time taken per step: {(time.time()-t0)/N}")
