@@ -75,16 +75,10 @@ def flow_at_foil(
 
     """
     coe = coe_offset(foil_offset, foil_theta, foil_coe)
-    # print(coe), "coe"
-    boat_space_rotational_flow = -np.cross([0, 0, boat_theta_dot], [coe[0], coe[1], 0])[
-        0:2
-    ]
-    # print(boat_space_rotational_flow, "r flow")
     global_flow = np.array(flow_velocity) - np.array(boat_velocity)
-    # print(rotate_vector(global_flow, -boat_theta), "boat velocity flow")
-    boat_space_flow = (
-        rotate_vector(global_flow, -boat_theta) + boat_space_rotational_flow
-    )
+    boat_space_rotational_flow = -np.cross([0, 0, boat_theta_dot], [coe[0], coe[1], 0])[0:2]
+    boat_space_directional_flow = rotate_vector(global_flow, -boat_theta)
+    boat_space_total_flow = (boat_space_directional_flow+ boat_space_rotational_flow)
     foil_flow = rotate_vector(boat_space_flow, -foil_theta)
     return foil_flow
 
