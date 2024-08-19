@@ -49,7 +49,7 @@ class MainSail:
         drag_dir = np.array(flow) / np.linalg.norm(flow)
         lift = lift_dir * 0.5 * cl * rho_air * self.area * np.linalg.norm(flow) ** 2
         drag = drag_dir * 0.5 * cd * rho_air * self.area * np.linalg.norm(flow) ** 2
-        print(
-            f"sail alpha: {np.rad2deg(alpha)} degrees, fl: {np.linalg.norm(lift)}, fd: {np.linalg.norm(drag)}"
-        )
+        # print(
+        #     f"sail alpha: {np.rad2deg(alpha)} degrees, fl: {np.linalg.norm(lift)}, fd: {np.linalg.norm(drag)}"
+        # )
         return lift + drag

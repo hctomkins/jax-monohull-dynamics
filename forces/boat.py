@@ -1,3 +1,5 @@
+from logging import debug
+
 from forces.foils import Foil
 from forces.force_utils import rotate_vector, flow_at_foil, foil_force_on_boat
 from forces.sails import MainSail
@@ -27,7 +29,7 @@ class BoatPhysics:
         # offsets assuming boat is pointing right and origin is at the centre of the boat
         self.board_offset = (0, 0)
         self.rudder_offset = (-length / 2, 0)
-        self.mast_offset = (length / 4, 0)
+        self.mast_offset = (0, 0)
         self.sail_coe_dist = sail_coe_dist
         self.damper_offset = (length / 2, 0)
 
@@ -52,6 +54,9 @@ class BoatPhysics:
             boat_theta=boat_theta,
             boat_theta_dot=boat_theta_dot,
         )
+        if np.linalg.norm(board_flow) > 1:
+            # print('!')
+            pass
         board_local_force = self.board.foil_frame_resultant(board_flow)
         board_force, board_moment = foil_force_on_boat(
             foil_force=board_local_force,
@@ -71,32 +76,33 @@ class BoatPhysics:
             boat_theta=boat_theta,
             boat_theta_dot=boat_theta_dot,
         )
+        # print(rudder_flow, sail_angle, "rudder flow")
         rudder_local_force = self.rudder.foil_frame_resultant(rudder_flow)
         rudder_force, rudder_moment = foil_force_on_boat(
             foil_force=rudder_local_force,
             foil_offset=self.rudder_offset,
             foil_theta=rudder_angle,
             boat_theta=boat_theta,
-            foil_coe=0,
+            foil_coe=self.rudder.chord / 2,
         )
         # Damper
-        damper_flow = flow_at_foil(
-            flow_velocity=tide,
-            boat_velocity=boat_velocity,
-            foil_offset=self.damper_offset,
-            foil_theta=0,
-            foil_coe=self.virtual_damper_foil.chord / 2,
-            boat_theta=boat_theta,
-            boat_theta_dot=boat_theta_dot,
-        )
-        damper_local_force = self.virtual_damper_foil.foil_frame_resultant(damper_flow)
-        _, damper_moment = foil_force_on_boat(
-            foil_force=damper_local_force,
-            foil_offset=self.damper_offset,
-            foil_theta=0,
-            boat_theta=boat_theta,
-            foil_coe=0,
-        )
+        # damper_flow = flow_at_foil(
+        #     flow_velocity=tide,
+        #     boat_velocity=boat_velocity,
+        #     foil_offset=self.damper_offset,
+        #     foil_theta=0,
+        #     foil_coe=self.virtual_damper_foil.chord / 2,
+        #     boat_theta=boat_theta,
+        #     boat_theta_dot=boat_theta_dot,
+        # )
+        # damper_local_force = self.virtual_damper_foil.foil_frame_resultant(damper_flow)
+        # _, damper_moment = foil_force_on_boat(
+        #     foil_force=damper_local_force,
+        #     foil_offset=self.damper_offset,
+        #     foil_theta=0,
+        #     boat_theta=boat_theta,
+        #     foil_coe=0,
+        # )
 
         # Sail
         sail_flow = flow_at_foil(
@@ -114,18 +120,31 @@ class BoatPhysics:
             foil_offset=self.mast_offset,
             foil_theta=sail_angle,
             boat_theta=boat_theta,
-            foil_coe=0,
+            foil_coe=self.sail_coe_dist,
         )
 
-        boat_speed = np.linalg.norm(boat_velocity)
         hull_drag = self.hull_drag.wave_drag(
-            speed=boat_speed
-        ) + self.hull_drag.viscous_drag(speed=boat_speed)
-        hull_drag = rotate_vector((-hull_drag, 0), boat_theta)
-
+            velocity=boat_velocity
+        ) + self.hull_drag.viscous_drag(velocity=boat_velocity)
+        # hull_drag = rotate_vector(hull_drag, boat_theta)
+        print(f"velocity: {boat_velocity}, hull_drag: {hull_drag}")
         resultant_force = board_force + rudder_force + sail_force + hull_drag
         resultant_moment = board_moment + rudder_moment + sail_moment
-        return resultant_force, resultant_moment
+
+        debug_data = {
+            "forces": {
+                "board": board_force,
+                "rudder": rudder_force,
+                "sail": sail_force,
+                "hull": hull_drag,
+            },
+            "moments": {
+                "board": board_moment,
+                "rudder": rudder_moment,
+                "sail": sail_moment,
+            },
+        }
+        return resultant_force, resultant_moment, debug_data
 
 
 class FireflyPhysics(BoatPhysics):
@@ -135,7 +154,7 @@ class FireflyPhysics(BoatPhysics):
             centreboard_chord=0.25,
             sail_area=6.3,
             hull_draft=0.25,
-            rudder_length=1.5,
+            rudder_length=1,
             rudder_chord=0.22,
             beam=1.42,
             lwl=3.58,

@@ -227,12 +227,16 @@ class HullDragEstimator:
             self.volume_of_displacement * rho_water * 9.81 * dimensionless_drag, 0
         )
 
-    def wave_drag(self, speed: float):
+    def wave_drag(self, velocity: tuple[float, float]):
+        speed = np.linalg.norm(velocity)
         fn = speed / np.sqrt(9.81 * self.lwl)
-        return self.displacement_wave_drag(fn)
+        drag_magnitude = self.displacement_wave_drag(fn)
+        drag_direction = - velocity / (speed + 1e-3)
+        return drag_magnitude * drag_direction
 
-    def viscous_drag(self, speed: float):
-        return (
+    def viscous_drag(self, velocity: tuple[float, float]):
+        speed = np.linalg.norm(velocity)
+        drag_magnitude = (
             1
             / 2
             * rho_water
@@ -240,6 +244,8 @@ class HullDragEstimator:
             * self.awp
             * self.skin_friction_coefficient(speed)
         )
+        drag_direction = - velocity / (speed + 1e-3)
+        return drag_magnitude * drag_direction
 
     def skin_friction_coefficient(self, u: float):
         return 0.075 / (np.log10(588000 * self.lwl * u) - 2) ** 2

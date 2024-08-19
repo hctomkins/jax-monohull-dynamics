@@ -35,7 +35,7 @@ class Foil:
         alpha_deg = np.rad2deg(alpha)
         re = water_re(np.linalg.norm(foil_frame_flow), self.chord)
         cl = self.polar.cl(re, alpha_deg)
-        cd = self.polar.cd(re, alpha_deg)
+        cd = self.polar.cd0(re)
         cd_tot = cd + cl**2 / (np.pi * self.aspect_ratio)
         lift_dir = np.array([np.sin(alpha), np.cos(alpha)])
         drag_dir = np.array(foil_frame_flow) / np.linalg.norm(foil_frame_flow)
@@ -52,7 +52,7 @@ class Foil:
             * 0.5
             * cd_tot
             * rho_water
-            * self.area
+            * self.chord
             * np.linalg.norm(foil_frame_flow) ** 2
         )
         # print(

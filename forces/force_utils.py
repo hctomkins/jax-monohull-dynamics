@@ -50,39 +50,6 @@ def coe_offset(
         foil_theta
     ) * coe
 
-
-def flow_at_foil(
-    flow_velocity: tuple[float, float],
-    boat_velocity: tuple[float, float],
-    foil_offset: tuple[float, float],
-    foil_theta: float,
-    foil_coe: float,
-    boat_theta: float,
-    boat_theta_dot: float,
-) -> tuple[float, float]:
-    """
-    Return local flow at a point given a velocity and rotation rate of parent. The flow is returned in the foil frame,
-    where the foil is pointing right at the origin (direct flow is [-1, 0])
-
-    Args:
-        boat_velocity:
-        foil_offset:
-        foil_theta: Anticlockwise from boat x axis
-        boat_theta: Anticlockwise from +ve x-axis
-        boat_theta_dot: Anticlockwise from +ve x-axis, rad/s
-
-    Returns: Local flow at foil
-
-    """
-    coe = coe_offset(foil_offset, foil_theta, foil_coe)
-    global_flow = np.array(flow_velocity) - np.array(boat_velocity)
-    boat_space_rotational_flow = -np.cross([0, 0, boat_theta_dot], [coe[0], coe[1], 0])[0:2]
-    boat_space_directional_flow = rotate_vector(global_flow, -boat_theta)
-    boat_space_total_flow = (boat_space_directional_flow+ boat_space_rotational_flow)
-    foil_flow = rotate_vector(boat_space_flow, -foil_theta)
-    return foil_flow
-
-
 def foil_force_on_boat(
     foil_force: tuple[float, float],
     foil_offset: tuple[float, float],
@@ -108,6 +75,25 @@ def foil_force_on_boat(
     moment = moments_about(boat_space_force, at=coe, about=(0.0, 0.0))
     world_space_force = rotate_vector(boat_space_force, boat_theta)
     return world_space_force, moment
+
+
+def flow_at_foil(
+    flow_velocity: tuple[float, float],
+    boat_velocity: tuple[float, float],
+    foil_offset: tuple[float, float],
+    foil_theta: float,
+    foil_coe: float,
+    boat_theta: float,
+    boat_theta_dot: float,
+) -> tuple[float, float]:
+    coe = coe_offset(foil_offset, foil_theta, foil_coe)
+    global_flow = np.array(flow_velocity) - np.array(boat_velocity)
+    boat_space_directional_flow = rotate_vector(global_flow, -boat_theta)
+    boat_space_rotational_flow = -np.cross([0, 0, boat_theta_dot], [coe[0], coe[1], 0])[0:2]
+    boat_space_total_flow = (boat_space_directional_flow + boat_space_rotational_flow)
+    foil_flow = rotate_vector(boat_space_total_flow, -foil_theta)
+    return foil_flow
+
 
 
 if __name__ == "__main__":

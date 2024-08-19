@@ -61,12 +61,13 @@ class Polar:
     def cd(self, re: int, alpha_deg):
         if alpha_deg <= self.alpha_min or alpha_deg >= self.alpha_max:
             # TODO: should this terminate at 2 or 1.24? Flat plate in 2d or 3d?
-            return 1 - np.cos(np.deg2rad(alpha_deg) * 2)
+            return (1 - np.cos(np.deg2rad(alpha_deg) * 2))*0.6
 
         re = self.nearest_re(re)
         return np.interp(alpha_deg, alphas_by_re[re], cd_by_re[re])
 
     def cl(self, re: int, alpha_deg):
+        print(alpha_deg)
         if alpha_deg <= self.alpha_min or alpha_deg >= self.alpha_max:
             return np.sin(np.deg2rad(alpha_deg) * 2)
 
