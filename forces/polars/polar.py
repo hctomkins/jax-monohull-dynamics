@@ -52,8 +52,12 @@ class Polar:
                 cl_by_re[re] = np.array(data["Cl"]).astype(np.float32)
 
             self.all_re = np.array(list(alphas_by_re.keys()))
-            self.alpha_min = np.max([np.min(alphas) for alphas in alphas_by_re.values()])
-            self.alpha_max = np.min([np.max(alphas) for alphas in alphas_by_re.values()])
+            self.alpha_min = np.max(
+                [np.min(alphas) for alphas in alphas_by_re.values()]
+            )
+            self.alpha_max = np.min(
+                [np.max(alphas) for alphas in alphas_by_re.values()]
+            )
 
     def cd0(self, re: int):
         return self.cd(re, 0)
@@ -61,7 +65,7 @@ class Polar:
     def cd(self, re: int, alpha_deg):
         if alpha_deg <= self.alpha_min or alpha_deg >= self.alpha_max:
             # TODO: should this terminate at 2 or 1.24? Flat plate in 2d or 3d?
-            return (1 - np.cos(np.deg2rad(alpha_deg) * 2))*0.6
+            return (1 - np.cos(np.deg2rad(alpha_deg) * 2)) * 0.6
 
         re = self.nearest_re(re)
         return np.interp(alpha_deg, alphas_by_re[re], cd_by_re[re])

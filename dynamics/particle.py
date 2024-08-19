@@ -1,6 +1,7 @@
 import numpy as np
 import time
 
+
 class Particle2D:
     def __init__(
         self,
@@ -37,4 +38,3 @@ class Particle2D:
         # x
         self.x += self.xdot * dt
         self.theta += self.thetadot * dt
-

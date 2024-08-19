@@ -6,6 +6,7 @@ from forces.sails import MainSail
 from forces.hull import HullDragEstimator
 import numpy as np
 
+
 class BoatPhysics:
     def __init__(
         self,
@@ -162,6 +163,7 @@ class FireflyPhysics(BoatPhysics):
             sail_coe_dist=1,
         )
 
+
 if __name__ == "__main__":
     boat = FireflyPhysics()
     boat_velocity = (1, 0)
@@ -171,8 +173,16 @@ if __name__ == "__main__":
     sail_angle = 0
     rudder_angle = 0
     import time
+
     t0 = time.time()
     N = 10000
     for i in range(N):
-        boat.forces_and_moments(boat_velocity, wind_velocity, boat_theta, boat_theta_dot, sail_angle, rudder_angle)
+        boat.forces_and_moments(
+            boat_velocity,
+            wind_velocity,
+            boat_theta,
+            boat_theta_dot,
+            sail_angle,
+            rudder_angle,
+        )
     print(f"Time taken per step: {(time.time()-t0)/N}")

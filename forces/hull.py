@@ -231,7 +231,7 @@ class HullDragEstimator:
         speed = np.linalg.norm(velocity)
         fn = speed / np.sqrt(9.81 * self.lwl)
         drag_magnitude = self.displacement_wave_drag(fn)
-        drag_direction = - velocity / (speed + 1e-3)
+        drag_direction = -velocity / (speed + 1e-3)
         return drag_magnitude * drag_direction
 
     def viscous_drag(self, velocity: tuple[float, float]):
@@ -244,7 +244,7 @@ class HullDragEstimator:
             * self.awp
             * self.skin_friction_coefficient(speed)
         )
-        drag_direction = - velocity / (speed + 1e-3)
+        drag_direction = -velocity / (speed + 1e-3)
         return drag_magnitude * drag_direction
 
     def skin_friction_coefficient(self, u: float):
