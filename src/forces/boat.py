@@ -1,5 +1,3 @@
-from logging import debug
-
 from forces.foils import Foil
 from forces.force_utils import rotate_vector, flow_at_foil, foil_force_on_boat
 from forces.sails import MainSail

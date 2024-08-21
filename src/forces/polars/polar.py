@@ -83,6 +83,8 @@ class Polar:
 
 
 if __name__ == "__main__":
+    from matplotlib import pyplot as plt
+
     p = Polar("n12")
     re = water_re(knts_to_ms(4), 0.2)
     print(re)

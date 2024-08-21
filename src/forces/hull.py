@@ -1,14 +1,14 @@
-from functools import partial
-
 import numpy as np
-from scipy.interpolate import interp1d
 
 from forces.polars.polar import rho_water
-from scipy.optimize import curve_fit
-import matplotlib
 
-matplotlib.use("WebAgg")
-import matplotlib.pyplot as plt
+
+# import matplotlib
+# from scipy.optimize import curve_fit
+# from functools import partial
+# from scipy.interpolate import interp1d
+# matplotlib.use("WebAgg")
+# import matplotlib.pyplot as plt
 
 coeffs = {
     "Fn": [

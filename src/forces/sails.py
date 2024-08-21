@@ -1,6 +1,5 @@
-from forces.polars.polar import air_re, rho_air
+from forces.polars.polar import rho_air
 import numpy as np
-import pandas as pd
 
 FINN_CL_CD = {
     0: (0, 0.097),
