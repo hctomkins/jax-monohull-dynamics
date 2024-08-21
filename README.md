@@ -1,5 +1,5 @@
 # Python Monohull Sail Dynamics
-
+**Note that this package is published under aGPLv3 - restrictions apply to commercial use.**
 A package intended to provide per-element simulation of sailing monohulls. Currently it supports variable foils, a single sail with finn geometry and variable area, and approximations for wave drag using the delft series.
 
 ## Installation
