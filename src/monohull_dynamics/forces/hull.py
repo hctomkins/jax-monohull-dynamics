@@ -1,6 +1,6 @@
 import numpy as np
 
-from forces.polars.polar import rho_water
+from monohull_dynamics.forces.polars.polar import rho_water
 
 
 # import matplotlib

@@ -1,4 +1,4 @@
-from forces.polars.polar import rho_air
+from monohull_dynamics.forces.polars.polar import rho_air
 import numpy as np
 
 FINN_CL_CD = {

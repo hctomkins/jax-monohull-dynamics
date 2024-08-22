@@ -19,3 +19,11 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/pypa/sampleproject"
 Issues = "https://github.com/pypa/sampleproject/issues"
+
+[build-system]
+requires = ["setuptools >= 73.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project.scripts]
+my-client = "monohull_dynamics.demo.demo:run_demo"

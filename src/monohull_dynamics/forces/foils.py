@@ -1,6 +1,6 @@
-from forces.polars.polar import Polar
+from monohull_dynamics.forces.polars.polar import Polar
 import numpy as np
-from forces.polars.polar import rho_water, water_re
+from monohull_dynamics.forces.polars.polar import rho_water, water_re
 
 
 class Foil:

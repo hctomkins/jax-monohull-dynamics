@@ -1,7 +1,7 @@
 import pyglet
 
-from forces.boat import FireflyPhysics
-from dynamics.particle import Particle2D
+from monohull_dynamics.forces.boat import FireflyPhysics
+from monohull_dynamics.dynamics.particle import Particle2D
 import numpy as np
 
 RESOLUTION = 800
@@ -30,7 +30,7 @@ def world_to_canvas(position: tuple[float, float]) -> tuple[float, float]:
     return ((np.array(position) / SCALE_M) + 0.5) * RESOLUTION
 
 
-if __name__ == "__main__":
+def run_demo():
     pyglet.resource.path = ["."]
     pyglet.resource.reindex()
     window = pyglet.window.Window(800, 800)
@@ -164,3 +164,6 @@ if __name__ == "__main__":
         sail_force_widget.draw()
 
     pyglet.app.run()
+
+if __name__ == "__main__":
+    run_demo()

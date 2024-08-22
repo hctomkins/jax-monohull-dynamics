@@ -1,7 +1,7 @@
-from forces.foils import Foil
-from forces.force_utils import rotate_vector, flow_at_foil, foil_force_on_boat
-from forces.sails import MainSail
-from forces.hull import HullDragEstimator
+from monohull_dynamics.forces.foils import Foil
+from monohull_dynamics.forces.force_utils import flow_at_foil, foil_force_on_boat
+from monohull_dynamics.forces.sails import MainSail
+from monohull_dynamics.forces.hull import HullDragEstimator
 import numpy as np
 
 

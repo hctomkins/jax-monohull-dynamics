@@ -1,5 +1,4 @@
-import pytest
-from forces.force_utils import moments_about
+from monohull_dynamics.forces.force_utils import moments_about
 
 
 def test_moments_about():
