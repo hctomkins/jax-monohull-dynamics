@@ -149,7 +149,7 @@ coeffs = {
 }
 
 
-def get_coeffs():
+def get_hull_coeffs():
     return {k: jnp.array(v) for k, v in coeffs.items()}
 
 
@@ -189,8 +189,8 @@ class HullData(typing.NamedTuple):
     hull_draft: jnp.ndarray
     beam: jnp.ndarray
     lwl: jnp.ndarray
-    prismatic_coefficient: jnp.ndarray
-    midship_section_coefficient: jnp.ndarray
+    prismatic_coefficient: jnp.ndarray = 0.5
+    midship_section_coefficient: jnp.ndarray = 0.7
 
 
 def init_hull(hull_draft: jnp.ndarray, beam: jnp.ndarray, lwl: jnp.ndarray):
@@ -291,7 +291,7 @@ if __name__ == "__main__":
 
     speeds = jnp.array([[0, s] for s in jnp.linspace(0, 15, 100)])
     hull_data = init_hull(hull_draft=0.2, beam=1.4, lwl=3.58)
-    coeffs = get_coeffs()
+    coeffs = get_hull_coeffs()
 
     wd_jit = jit(vmap(wave_drag, in_axes=(None, None, 0)))
     vd_jit = jit(vmap(viscous_drag, in_axes=(None, 0)))

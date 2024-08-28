@@ -1,11 +1,11 @@
 import jax.numpy as jnp
 from jax import jit, vmap
-from monohull_dynamics.forces.hull import init_hull, get_coeffs, viscous_drag, wave_drag
+from monohull_dynamics.forces.hull import init_hull, get_hull_coeffs, viscous_drag, wave_drag
 
 
 def test_hull_drag():
     hull_data = init_hull(hull_draft=0.2, beam=1.4, lwl=3.58)
-    coeffs = get_coeffs()
+    coeffs = get_hull_coeffs()
     assert -1500 < float(wave_drag(hull_data, coeffs, jnp.array([5, 0]))[0]) < -500
     assert -200 < float(viscous_drag(hull_data, jnp.array([5, 0]))[0]) < -150
 
