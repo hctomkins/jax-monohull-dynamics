@@ -1,5 +1,5 @@
-import numpy as np
-
+import jax.numpy as jnp
+import typing
 from monohull_dynamics.forces.polars.polar import rho_water
 
 
@@ -149,162 +149,163 @@ coeffs = {
 }
 
 
-def a0(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a0"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a0"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def get_coeffs():
+    return {k: jnp.array(v) for k, v in coeffs.items()}
 
 
-def a1(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a1"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a1"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a0(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a0"])
 
 
-def a2(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a2"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a2"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a1(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a1"])
 
 
-def a3(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a3"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a3"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a2(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a2"])
 
 
-def a4(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a4"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a4"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a3(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a3"])
 
 
-def a5(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a5"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a5"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a4(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a4"])
 
 
-def a6(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a6"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a6"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a5(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a5"])
 
 
-def a7(Fn):
-    return np.interp(Fn, coeffs["Fn"], coeffs["a7"])
-    # interpolator = interp1d(coeffs["Fn"], coeffs["a7"], kind="linear", fill_value="extrapolate")
-    # return interpolator(Fn)
+def a6(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a6"])
 
 
-class HullDragEstimator:
-    def __init__(self, hull_draft: float, beam: float, lwl: float):
-        self.hull_draft = hull_draft
-        self.beam = beam
-        self.lwl = lwl
-        self.prismatic_coefficient = 0.5
-        self.midship_section_coefficient = 0.7
-        # self.wave_drag_estimator = self.setup_fit()
+def a7(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
+    return jnp.interp(Fn, coeffs["Fn"], coeffs["a7"])
 
-    def displacement_wave_drag(self, fn: float) -> float:
-        dimensionless_drag = (
-            a0(fn)
-            + (self.volume_of_displacement ** (1 / 3) / self.lwl)
-            * (
-                a1(fn) * self.lcb / self.lcf
-                + a2(fn) * self.prismatic_coefficient
-                + a3(fn) * self.volume_of_displacement ** (2 / 3) / self.awp
-                + a4(fn) * self.bwl / self.lwl
-            )
-            + (self.volume_of_displacement ** (1 / 3) / self.lwl)
-            * (
-                a5(fn) * self.lcb / self.lcf
-                + a6(fn) * self.bwl / self.hull_draft
-                + a7(fn) * self.midship_section_coefficient
-            )
+
+class HullData(typing.NamedTuple):
+    hull_draft: jnp.ndarray
+    beam: jnp.ndarray
+    lwl: jnp.ndarray
+    prismatic_coefficient: jnp.ndarray
+    midship_section_coefficient: jnp.ndarray
+
+
+def init_hull(hull_draft: jnp.ndarray, beam: jnp.ndarray, lwl: jnp.ndarray):
+    return HullData(
+        hull_draft=jnp.array(hull_draft),
+        beam=jnp.array(beam),
+        lwl=jnp.array(lwl),
+        prismatic_coefficient=jnp.array(0.5),
+        midship_section_coefficient=jnp.array(0.7),
+    )
+
+
+def displacement_wave_drag(
+    hull_data: HullData, coeffs: dict[str, jnp.ndarray], fn: jnp.ndarray
+) -> jnp.ndarray:
+    _lcb = lcb(hull_data.lwl)
+    _lcf = lcf(hull_data.lwl)
+    _bwl = bwl(hull_data.beam)
+    _awp = awp(hull_data.lwl, _bwl)
+    _volume_of_displacement = volume_of_displacement(_awp, hull_data.hull_draft)
+
+    dimensionless_drag = (
+        a0(coeffs, fn)
+        + (_volume_of_displacement ** (1 / 3) / hull_data.lwl)
+        * (
+            a1(coeffs, fn) * _lcb / _lcf
+            + a2(coeffs, fn) * hull_data.prismatic_coefficient
+            + a3(coeffs, fn) * _volume_of_displacement ** (2 / 3) / _awp
+            + a4(coeffs, fn) * _bwl / hull_data.lwl
         )
-        return max(
-            self.volume_of_displacement * rho_water * 9.81 * dimensionless_drag, 0
+        + (_volume_of_displacement ** (1 / 3) / hull_data.lwl)
+        * (
+            a5(coeffs, fn) * _lcb / _lcf
+            + a6(coeffs, fn) * _bwl / hull_data.hull_draft
+            + a7(coeffs, fn) * hull_data.midship_section_coefficient
         )
+    )
+    return jnp.clip(
+        _volume_of_displacement * rho_water * 9.81 * dimensionless_drag, min=0, max=None
+    )
 
-    def wave_drag(self, velocity: tuple[float, float]):
-        speed = np.linalg.norm(velocity)
-        fn = speed / np.sqrt(9.81 * self.lwl)
-        drag_magnitude = self.displacement_wave_drag(fn)
-        drag_direction = -velocity / (speed + 1e-3)
-        return drag_magnitude * drag_direction
 
-    def viscous_drag(self, velocity: tuple[float, float]):
-        speed = np.linalg.norm(velocity)
-        drag_magnitude = (
-            1
-            / 2
-            * rho_water
-            * speed**2
-            * self.awp
-            * self.skin_friction_coefficient(speed)
-        )
-        drag_direction = -velocity / (speed + 1e-3)
-        return drag_magnitude * drag_direction
+def wave_drag(
+    hull_data: HullData, coeffs: dict[str, jnp.ndarray], velocity: jnp.ndarray
+) -> jnp.ndarray:
+    speed = jnp.linalg.norm(velocity)
+    fn = speed / jnp.sqrt(9.81 * hull_data.lwl)
+    drag_magnitude = displacement_wave_drag(hull_data, coeffs, fn)
+    drag_direction = -velocity / (speed + 1e-3)
+    return drag_magnitude * drag_direction
 
-    def skin_friction_coefficient(self, u: float):
-        return 0.075 / (np.log10(588000 * self.lwl * u) - 2) ** 2
 
-    # def setup_fit(self, plot=True):
-    #     fns = np.linspace(0.15, 0.75, 1000)
-    #     drag = np.array([self.displacement_wave_drag(fn) for fn in fns])
-    #     max_drag = np.max(drag)
-    #
-    #     def f(fn, b, s):
-    #         a = -0.7
-    #         return max_drag * s * fn * (1/(b**2 * (fn + a)**2 + 1)**2) # + (b * (fn + a))**2 / 20)
-    #
-    #     popt, _ = curve_fit(f=f, xdata=fns, ydata=drag, p0=[-3, 1.5])
-    #
-    #     if plot:
-    #         plt.figure()
-    #         plt.plot(fns, drag, label="Data")
-    #         plt.plot(fns, [f(fn, b=popt[0], s=popt[1]) for fn in fns], label="Fit")
-    #         plt.legend()
-    #
-    #     return partial(f, b=popt[0], s=popt[1])
+def viscous_drag(hull_data: HullData, velocity: jnp.ndarray) -> jnp.ndarray:
+    _bwl = bwl(hull_data.beam)
+    _awp = awp(hull_data.lwl, _bwl)
+    speed = jnp.linalg.norm(velocity)
+    drag_magnitude = (
+        1
+        / 2
+        * rho_water
+        * speed**2
+        * _awp
+        * skin_friction_coefficient(hull_data.lwl, speed)
+    )
+    drag_direction = -velocity / (speed + 1e-3)
+    return drag_magnitude * drag_direction
 
-    @property
-    def lcb(self):
-        return 0.5 * self.lwl
 
-    @property
-    def lcf(self):
-        return 0.5 * self.lwl
+def skin_friction_coefficient(lwl: jnp.ndarray, u: jnp.ndarray):
+    return 0.075 / (jnp.log10(588000 * lwl * u) - 2) ** 2
 
-    @property
-    def bwl(self):
-        return self.beam * 0.95
 
-    @property
-    def awp(self):
-        return self.lwl * self.bwl
+def lcb(lwl: jnp.ndarray):
+    return 0.5 * lwl
 
-    @property
-    def volume_of_displacement(self):
-        return self.awp * self.hull_draft * 0.6
+
+def lcf(lwl: jnp.ndarray):
+    return 0.5 * lwl
+
+
+def bwl(
+    beam: jnp.ndarray,
+):
+    return beam * 0.95
+
+
+def awp(lwl: jnp.ndarray, bwl: jnp.ndarray):
+    return lwl * bwl
+
+
+def volume_of_displacement(awp: jnp.ndarray, hull_draft: jnp.ndarray):
+    return awp * hull_draft * 0.6
 
 
 if __name__ == "__main__":
-    awd = HullDragEstimator(lwl=3.58, beam=1.4, hull_draft=0.2)
-    speeds = np.linspace(0, 15, 100)
-    fn = speeds / np.sqrt(9.81 * awd.lwl)
-    wave_drag = [awd.wave_drag(speed) for speed in speeds]
-    viscous_drag = [awd.viscous_drag(speed) for speed in speeds]
+    from matplotlib import pyplot as plt
+    from jax import jit, vmap
+
+    speeds = jnp.array([[0, s] for s in jnp.linspace(0, 15, 100)])
+    hull_data = init_hull(hull_draft=0.2, beam=1.4, lwl=3.58)
+    coeffs = get_coeffs()
+
+    wd_jit = jit(vmap(wave_drag, in_axes=(None, None, 0)))
+    vd_jit = jit(vmap(viscous_drag, in_axes=(None, 0)))
+
+    wave_drags = wd_jit(hull_data, coeffs, speeds)
+    viscous_drags = vd_jit(hull_data, speeds)
     ms_to_knots = 1.94384
 
-    x_axis = speeds * ms_to_knots
-    # x_axis = fn
+    x_axis = speeds[:, 1] * ms_to_knots
 
     plt.figure()
-    plt.plot(x_axis, wave_drag, label="Wave drag")
-    plt.plot(x_axis, viscous_drag, label="Viscous drag")
-    plt.plot(x_axis, np.array(wave_drag) + np.array(viscous_drag), label="Total drag")
+    plt.plot(x_axis, -wave_drags[:, 1], label="Wave drag")
+    plt.plot(x_axis, -viscous_drags[:, 1], label="Viscous drag")
+    plt.plot(x_axis, -(wave_drags + viscous_drags)[:, 1], label="Total drag")
     plt.xlabel("Speed [knots]")
     plt.legend()
     plt.show()

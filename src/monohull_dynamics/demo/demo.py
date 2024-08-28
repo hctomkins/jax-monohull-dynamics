@@ -165,5 +165,6 @@ def run_demo():
 
     pyglet.app.run()
 
+
 if __name__ == "__main__":
     run_demo()

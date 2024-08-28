@@ -1,9 +1,13 @@
 **Note that this package is published under aGPLv3 - restrictions apply to commercial use.**
 
 # Python Monohull Sail Dynamics
-A package intended to provide per-element simulation of sailing monohulls. Currently it supports variable foils, a single sail with finn geometry and variable area, and approximations for wave drag using the delft series.
+A package intended to provide per-element simulation of sailing monohulls. Implemented in pure JAX and aimed at 
+reinforcement learning for sailboat control. 
 
-Currently, this is performed in 2D, neglecting heel and pitch. Leeway is naturally accounted for through the force model.
+I made this package as existing packages mainly account for optimal states
+(E.G. assuming the main is trimmed appropriately upwind), so this includes reasonable approximations for more unusual states
+like backing of the mainsail etc. The estimator currently supports variable foils, a single sail with finn geometry and variable area, and approximations for wave drag using the delft series. Simulations are limited to 2D, neglecting heel and pitch. Leeway is naturally produced through the force model.
+
 ## Installation
 
 ```bash

@@ -1,5 +1,6 @@
 from monohull_dynamics.forces.polars.polar import rho_air
-import numpy as np
+import jax.numpy as jnp
+import typing
 
 FINN_CL_CD = {
     0: (0, 0.097),
@@ -27,28 +28,40 @@ FINN_CL = [x[0] for x in FINN_CL_CD.values()]
 FINN_CD = [x[1] for x in FINN_CL_CD.values()]
 
 
-class MainSail:
-    def __init__(self, area: float):
-        self.area = area
+class SailData(typing.NamedTuple):
+    area: jnp.ndarray
+    alphas: jnp.ndarray
+    cl: jnp.ndarray
+    cd: jnp.ndarray
 
-    def sail_frame_resultant(self, flow: tuple[float, float]):
-        """
-        Args:
-            flow: [x, y] velocity of flow at sail where sail is at origin and pointing right,
-            so horizontal flow is [-1,0], positive sail alpha is from below, so flow is [-1,1]
-        Returns:
-            Resultant force vector in foil reference frame (foil pointing left)
-        """
-        alpha = np.arctan2(flow[1], -flow[0])
-        alpha_sign = np.sign(alpha)
-        alpha_abs_deg = np.abs(np.rad2deg(alpha))
-        cl = np.interp(alpha_abs_deg, FINN_ALPHAS, FINN_CL)
-        cd = np.interp(alpha_abs_deg, FINN_ALPHAS, FINN_CD)
-        lift_dir = np.array([np.sin(alpha), np.cos(alpha)]) * alpha_sign
-        drag_dir = np.array(flow) / np.linalg.norm(flow)
-        lift = lift_dir * 0.5 * cl * rho_air * self.area * np.linalg.norm(flow) ** 2
-        drag = drag_dir * 0.5 * cd * rho_air * self.area * np.linalg.norm(flow) ** 2
-        # print(
-        #     f"sail alpha: {np.rad2deg(alpha)} degrees, fl: {np.linalg.norm(lift)}, fd: {np.linalg.norm(drag)}"
-        # )
-        return lift + drag
+
+def init_sail_data(area: jnp.ndarray):
+    return SailData(
+        area=area,
+        alphas=jnp.array(FINN_ALPHAS),
+        cl=jnp.array(FINN_CL),
+        cd=jnp.array(FINN_CD),
+    )
+
+
+def sail_frame_resultant(sail_data: SailData, flow: jnp.array):
+    """
+    Args:
+        flow: [x, y] velocity of flow at sail where sail is at origin and pointing right,
+        so horizontal flow is [-1,0], positive sail alpha is from below, so flow is [-1,1]. Shape [2]
+    Returns:
+        Resultant force vector in foil reference frame (foil pointing left)
+    """
+    alpha = jnp.arctan2(flow[1], -flow[0])
+    alpha_sign = jnp.sign(alpha)
+    alpha_abs_deg = jnp.abs(jnp.rad2deg(alpha))
+    cl = jnp.interp(alpha_abs_deg, sail_data.alphas, sail_data.cl)
+    cd = jnp.interp(alpha_abs_deg, sail_data.alphas, sail_data.cd)
+    lift_dir = jnp.stack([jnp.sin(alpha), jnp.cos(alpha)]) * alpha_sign
+    drag_dir = jnp.array(flow) / jnp.linalg.norm(flow)
+    lift = lift_dir * 0.5 * cl * rho_air * sail_data.area * jnp.linalg.norm(flow) ** 2
+    drag = drag_dir * 0.5 * cd * rho_air * sail_data.area * jnp.linalg.norm(flow) ** 2
+    # print(
+    #     f"sail alpha: {np.rad2deg(alpha)} degrees, fl: {np.linalg.norm(lift)}, fd: {np.linalg.norm(drag)}"
+    # )
+    return lift + drag
