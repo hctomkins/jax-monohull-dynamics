@@ -12,8 +12,8 @@ from monohull_dynamics.forces.boat import BoatData, init_firefly, forces_and_mom
 RESOLUTION = 800
 SCALE_M = 30
 
-PYTHON_DT = 0.01
-JAX_INNER_N = 10000
+PYTHON_DT = 0.001
+JAX_INNER_N = 1
 
 
 def center_image(image):
@@ -38,8 +38,8 @@ def init_simulation_state():
     return SimulationState(
         force_model=init_firefly(),
         particle_state=ParticleState(
-            m=jnp.array(1.0),
-            I=jnp.array(1.0),
+            m=jnp.array(100.0),
+            I=jnp.array(100.0),
             x=jnp.array([0.0,0.0]),
             xdot=jnp.array([0.0, 0.0]),
             theta=jnp.array(0.0),
@@ -66,19 +66,17 @@ def step_uncontrolled(simulation_state: SimulationState, inner_dt) -> Simulation
     # jax.debug.print("force {f}", f=f)
     return simulation_state._replace(particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd)
 
-j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(1,))
 
 def integrate_many(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
     body_fn = lambda i, rolled_state: step_uncontrolled(rolled_state, inner_dt)
     return jax.lax.fori_loop(0, N, body_fn, simulation_state)
 
+j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(1,))
 j_integrate_many = jax.jit(integrate_many, static_argnums=(2))
 
 def integrate_many_debug(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
-    # print("Integrating")
     for i in range(N):
         simulation_state = j_step_uncontrolled(simulation_state, inner_dt)
-        # print(simulation_state.particle_state.x)
     return simulation_state
 
 
@@ -133,7 +131,7 @@ def run_demo():
 
     def step_physics(dt):
         # t0=time.time()
-        print(dt)
+        dt = min(0.1, dt)
         sim_state = global_state.state
 
         if keys[pyglet.window.key.SPACE]:
