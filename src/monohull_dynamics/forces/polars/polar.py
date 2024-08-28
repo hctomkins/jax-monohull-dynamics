@@ -70,10 +70,10 @@ def init_polar(dir: str | None):
         cl_arrays[i] = jnp.pad(cl_arrays[i], (0, padding), mode="edge")
 
     return PolarData(
-        all_re=jnp.array(all_re),
-        alphas_by_re=jnp.stack(alphas),
-        cd_by_re=jnp.stack(cd_arrays),
-        cl_by_re=jnp.stack(cl_arrays),
+        all_re=jnp.array(all_re, dtype=jnp.float32),
+        alphas_by_re=jnp.stack(alphas, dtype=jnp.float32),
+        cd_by_re=jnp.stack(cd_arrays, dtype=jnp.float32),
+        cl_by_re=jnp.stack(cl_arrays, dtype=jnp.float32),
     )
 
 
@@ -106,7 +106,7 @@ def cl(polar_data: PolarData, re, alpha_deg):
     )
 
 
-def re_index(polar_data: PolarData, re: int):
+def re_index(polar_data: PolarData, re: jnp.ndarray):
     return jnp.argmin(jnp.abs(polar_data.all_re - re))
 
 

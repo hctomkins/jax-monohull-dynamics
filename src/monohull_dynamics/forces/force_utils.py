@@ -56,8 +56,8 @@ def coe_offset(
     The coe is a positive length, and foil_theta assumes the foil is pointing right, so we SUBTRACT x coe distance
     """
     # foil offset [2] [x,y]
-    _coe_offset = jnp.zeros_like(foil_offset)
-    coe_vector = jnp.ones_like(foil_offset) * coe
+    _coe_offset = jnp.zeros_like(foil_offset, dtype=jnp.float32)
+    coe_vector = jnp.ones_like(foil_offset, dtype=jnp.float32) * coe
     coe_vector = coe_vector.at[0].multiply(jnp.cos(foil_theta))
     coe_vector = coe_vector.at[1].multiply(jnp.sin(foil_theta))
     return foil_offset - coe_vector

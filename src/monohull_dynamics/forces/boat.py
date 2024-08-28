@@ -2,12 +2,25 @@ from monohull_dynamics.forces.foils import FoilData, foil_frame_resultant
 from monohull_dynamics.forces.force_utils import flow_at_foil, foil_force_on_boat
 import jax.numpy as jnp
 import typing
+import jax
 
 from monohull_dynamics.forces.hull import HullData, wave_drag, viscous_drag, get_hull_coeffs
 from monohull_dynamics.forces.polars.polar import init_polar
 from monohull_dynamics.forces.sails import SailData, init_sail_data, sail_frame_resultant
 
-
+DUMMY_DEBUG_DATA = {
+        "forces": {
+            "board": jnp.array([0., 0.]),
+            "rudder": jnp.array([0., 0.]),
+            "sail": jnp.array([0., 0.]),
+            "hull": jnp.array([0., 0.]),
+        },
+        "moments": {
+            "board": jnp.array(0.),
+            "rudder": jnp.array(0.),
+            "sail": jnp.array(0.),
+        },
+    }
 class BoatData(typing.NamedTuple):
     hull_data: HullData
     rudder_data: FoilData
@@ -67,9 +80,9 @@ def init_boat(
         lwl=lwl,
         length=length,
         sail_coe_dist=sail_coe_dist,
-        board_offset=jnp.array([0, 0]),
-        rudder_offset=jnp.array([-length/2, 0]),
-        mast_offset=jnp.array([0, 0]), # TODO: Update to actual mast offset
+        board_offset=jnp.array([0.0, 0.0]),
+        rudder_offset=jnp.array([-length/2, 0.0]),
+        mast_offset=jnp.array([0.0, 0.0]), # TODO: Update to actual mast offset
         hull_coeffs=get_hull_coeffs()
     )
 
@@ -83,14 +96,14 @@ def forces_and_moments(
     sail_angle: jnp.ndarray,
     rudder_angle: jnp.ndarray,
 ) -> tuple[jnp.ndarray, jnp.ndarray, dict[str, dict[str, jnp.ndarray]]]:
-    tide = jnp.array([0, 0])
+    tide = jnp.array([0.0, 0.0])
 
     # flow at board
     board_flow = flow_at_foil(
         flow_velocity=tide,
         boat_velocity=boat_velocity,
         foil_offset=boat_data.board_offset,
-        foil_theta=0,
+        foil_theta=0.0,
         foil_coe=boat_data.board_data.chord / 2,
         boat_theta=boat_theta,
         boat_theta_dot=boat_theta_dot,
@@ -99,9 +112,9 @@ def forces_and_moments(
     board_force, board_moment = foil_force_on_boat(
         foil_force=board_local_force,
         foil_offset=boat_data.board_offset,
-        foil_theta=0,
+        foil_theta=0.0,
         boat_theta=boat_theta,
-        foil_coe=0,
+        foil_coe=0.0,
     )
 
     # Rudder
@@ -114,7 +127,6 @@ def forces_and_moments(
         boat_theta=boat_theta,
         boat_theta_dot=boat_theta_dot,
     )
-    # print(rudder_flow, sail_angle, "rudder flow")
     rudder_local_force = foil_frame_resultant(boat_data.rudder_data, rudder_flow)
     rudder_force, rudder_moment = foil_force_on_boat(
         foil_force=rudder_local_force,
@@ -175,12 +187,12 @@ def init_firefly():
         centreboard_chord=0.25,
         sail_area=6.3,
         hull_draft=0.25,
-        rudder_length=1,
+        rudder_length=1.0,
         rudder_chord=0.22,
         beam=1.42,
         lwl=3.58,
         length=3.66,
-        sail_coe_dist=1,
+        sail_coe_dist=1.0,
     )
 
 
