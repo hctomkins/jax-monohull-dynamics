@@ -5,18 +5,24 @@ import typing
 from jax import lax
 import jax.debug
 
+
 class FoilData(typing.NamedTuple):
     length: jnp.ndarray
     chord: jnp.ndarray
     polar: PolarData
 
+
 def aspect_ratio(foil_data: FoilData):
     return foil_data.length / foil_data.chord
+
 
 def area(foil_data: FoilData):
     return foil_data.length * foil_data.chord
 
-def foil_frame_resultant(foil_data: FoilData, foil_frame_flow: jnp.ndarray) -> jnp.ndarray:
+
+def foil_frame_resultant(
+    foil_data: FoilData, foil_frame_flow: jnp.ndarray
+) -> jnp.ndarray:
     mag = jnp.linalg.norm(foil_frame_flow)
     return lax.cond(
         mag < 1e-6,
@@ -25,7 +31,10 @@ def foil_frame_resultant(foil_data: FoilData, foil_frame_flow: jnp.ndarray) -> j
         None,
     )
 
-def _foil_frame_resultant_unsafe(foil_data: FoilData, foil_frame_flow: jnp.ndarray) -> jnp.ndarray:
+
+def _foil_frame_resultant_unsafe(
+    foil_data: FoilData, foil_frame_flow: jnp.ndarray
+) -> jnp.ndarray:
     """
     Args:
         foil_frame_flow: [x, y] velocity of flow at foil where foil is at origin and pointing right,
@@ -35,9 +44,7 @@ def _foil_frame_resultant_unsafe(foil_data: FoilData, foil_frame_flow: jnp.ndarr
     """
 
     # arctan2 is anticlockwise from +ve x, alpha defined clockwise from -ve x axis in terms of flow
-    alpha = jnp.arctan2(
-        foil_frame_flow[1], -foil_frame_flow[0]
-    )
+    alpha = jnp.arctan2(foil_frame_flow[1], -foil_frame_flow[0])
     alpha_deg = jnp.rad2deg(alpha)
     re = water_re(jnp.linalg.norm(foil_frame_flow), foil_data.chord)
     _cl = cl(foil_data.polar, re, alpha_deg)

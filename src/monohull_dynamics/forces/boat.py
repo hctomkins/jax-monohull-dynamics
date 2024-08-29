@@ -4,23 +4,34 @@ import jax.numpy as jnp
 import typing
 import jax
 
-from monohull_dynamics.forces.hull import HullData, wave_drag, viscous_drag, get_hull_coeffs
+from monohull_dynamics.forces.hull import (
+    HullData,
+    wave_drag,
+    viscous_drag,
+    get_hull_coeffs,
+)
 from monohull_dynamics.forces.polars.polar import init_polar
-from monohull_dynamics.forces.sails import SailData, init_sail_data, sail_frame_resultant
+from monohull_dynamics.forces.sails import (
+    SailData,
+    init_sail_data,
+    sail_frame_resultant,
+)
 
 DUMMY_DEBUG_DATA = {
-        "forces": {
-            "board": jnp.array([0., 0.]),
-            "rudder": jnp.array([0., 0.]),
-            "sail": jnp.array([0., 0.]),
-            "hull": jnp.array([0., 0.]),
-        },
-        "moments": {
-            "board": jnp.array(0.),
-            "rudder": jnp.array(0.),
-            "sail": jnp.array(0.),
-        },
-    }
+    "forces": {
+        "board": jnp.array([0.0, 0.0]),
+        "rudder": jnp.array([0.0, 0.0]),
+        "sail": jnp.array([0.0, 0.0]),
+        "hull": jnp.array([0.0, 0.0]),
+    },
+    "moments": {
+        "board": jnp.array(0.0),
+        "rudder": jnp.array(0.0),
+        "sail": jnp.array(0.0),
+    },
+}
+
+
 class BoatData(typing.NamedTuple):
     hull_data: HullData
     rudder_data: FoilData
@@ -39,7 +50,8 @@ class BoatData(typing.NamedTuple):
     board_offset: jnp.ndarray
     rudder_offset: jnp.ndarray
     mast_offset: jnp.ndarray
-    hull_coeffs: dict[str, jnp.ndarray] # TODO: should these be top level?
+    hull_coeffs: dict[str, jnp.ndarray]  # TODO: should these be top level?
+
 
 def init_boat(
     centreboard_length: jnp.ndarray,
@@ -81,9 +93,9 @@ def init_boat(
         length=length,
         sail_coe_dist=sail_coe_dist,
         board_offset=jnp.array([0.0, 0.0]),
-        rudder_offset=jnp.array([-length/2, 0.0]),
-        mast_offset=jnp.array([0.0, 0.0]), # TODO: Update to actual mast offset
-        hull_coeffs=get_hull_coeffs()
+        rudder_offset=jnp.array([-length / 2, 0.0]),
+        mast_offset=jnp.array([0.0, 0.0]),  # TODO: Update to actual mast offset
+        hull_coeffs=get_hull_coeffs(),
     )
 
 
@@ -208,7 +220,7 @@ if __name__ == "__main__":
     sail_angle = 0
     rudder_angle = 0
 
-    f, m, _ =forces_and_moments(
+    f, m, _ = forces_and_moments(
         boat,
         boat_velocity,
         wind_velocity,

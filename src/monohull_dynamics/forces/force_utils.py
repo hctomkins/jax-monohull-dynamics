@@ -108,4 +108,3 @@ def flow_at_foil(
     boat_space_total_flow = boat_space_directional_flow + boat_space_rotational_flow
     foil_flow = rotate_vector(boat_space_total_flow, -foil_theta)
     return foil_flow
-

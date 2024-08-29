@@ -17,7 +17,7 @@ def test_foils():
         foil_frame_flow=jnp.array([-1.0, 0.0]),
     )
     assert f_sym[0] < 0
-    assert -0.01 <f_sym[1] < 0.01
+    assert -0.01 < f_sym[1] < 0.01
     f_lift = foil_frame_resultant(
         foil_data=foil_data,
         foil_frame_flow=jnp.array([-1.0, 0.1]),
@@ -37,4 +37,3 @@ def test_foils():
         jnp.array([[-1.0, 0.0], [-1.0, 0.1]]),
     )
     assert jnp.allclose(many_f, jnp.stack([f_sym, f_lift]), atol=1e-5, rtol=1e-5)
-

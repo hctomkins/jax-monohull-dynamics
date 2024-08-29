@@ -4,7 +4,8 @@ from monohull_dynamics.forces.force_utils import (
     rotate_vector_about,
     rotate_vector,
     coe_offset,
-    foil_force_on_boat, flow_at_foil
+    foil_force_on_boat,
+    flow_at_foil,
 )
 import jax.numpy as jnp
 from jax import jit, vmap
@@ -118,15 +119,15 @@ def test_foil_force_on_boat():
     )
     assert jnp.allclose(m, jnp.array([-1, 1]), atol=1e-5, rtol=1e-5)
 
-def test_flow_at_foil():
 
+def test_flow_at_foil():
     # Boat moving sideways, flow up into foil
     flow = flow_at_foil(
         flow_velocity=jnp.array([0, 0]),
         boat_velocity=jnp.array([5, 0]),
         foil_offset=jnp.array([-1, 0]),
         foil_theta=0,
-        foil_coe=0, #jnp.sqrt(2),
+        foil_coe=0,  # jnp.sqrt(2),
         boat_theta=jnp.pi / 2,
         boat_theta_dot=0,
     )
@@ -137,8 +138,8 @@ def test_flow_at_foil():
         flow_velocity=jnp.array([0, 0]),
         boat_velocity=jnp.array([jnp.sqrt(2), 0]),
         foil_offset=jnp.array([-1, 0]),
-        foil_theta=jnp.pi/4,
-        foil_coe=0, #jnp.sqrt(2),
+        foil_theta=jnp.pi / 4,
+        foil_coe=0,  # jnp.sqrt(2),
         boat_theta=jnp.pi / 2,
         boat_theta_dot=0,
     )
@@ -149,19 +150,19 @@ def test_flow_at_foil():
         flow_velocity=jnp.array([0, 0]),
         boat_velocity=jnp.array([jnp.sqrt(2), 0]),
         foil_offset=jnp.array([-1, 0]),
-        foil_theta=jnp.pi/4,
-        foil_coe=0, #jnp.sqrt(2),
+        foil_theta=jnp.pi / 4,
+        foil_coe=0,  # jnp.sqrt(2),
         boat_theta=jnp.pi / 2,
         boat_theta_dot=jnp.sqrt(2),
     )
     assert jnp.allclose(flow, jnp.array([2, 2]), atol=1e-5, rtol=1e-5)
 
-    #with coe
+    # with coe
     flow = flow_at_foil(
         flow_velocity=jnp.array([0, 0]),
         boat_velocity=jnp.array([jnp.sqrt(2), 0]),
         foil_offset=jnp.array([-1, 0]),
-        foil_theta=jnp.pi/4,
+        foil_theta=jnp.pi / 4,
         foil_coe=jnp.sqrt(2),
         boat_theta=jnp.pi / 2,
         boat_theta_dot=jnp.sqrt(2),
@@ -171,12 +172,11 @@ def test_flow_at_foil():
     flow_many = jit(vmap(flow_at_foil, in_axes=(None, 0, None, None, None, None, None)))
     flows = flow_many(
         jnp.array([0, 0]),
-        jnp.array([[jnp.sqrt(2), 0],[2*jnp.sqrt(2), 0]]),
+        jnp.array([[jnp.sqrt(2), 0], [2 * jnp.sqrt(2), 0]]),
         jnp.array([-1, 0]),
-        jnp.pi/4,
+        jnp.pi / 4,
         jnp.sqrt(2),
         jnp.pi / 2,
         jnp.sqrt(2),
     )
-    assert jnp.allclose(flows, jnp.array([[2, 4],[3,5]]), atol=1e-5, rtol=1e-5)
-
+    assert jnp.allclose(flows, jnp.array([[2, 4], [3, 5]]), atol=1e-5, rtol=1e-5)

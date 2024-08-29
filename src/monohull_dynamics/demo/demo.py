@@ -4,10 +4,14 @@ import pyglet
 import typing
 import jax.numpy as jnp
 import jax
-jax.config.update('jax_numpy_dtype_promotion', 'strict')
 
 from monohull_dynamics.dynamics.particle import ParticleState, integrate
-from monohull_dynamics.forces.boat import BoatData, init_firefly, forces_and_moments, DUMMY_DEBUG_DATA
+from monohull_dynamics.forces.boat import (
+    BoatData,
+    init_firefly,
+    forces_and_moments,
+    DUMMY_DEBUG_DATA,
+)
 
 RESOLUTION = 800
 SCALE_M = 30
@@ -21,6 +25,7 @@ def center_image(image):
     image.anchor_x = image.width // 2
     image.anchor_y = image.height // 2
 
+
 class SimulationState(typing.NamedTuple):
     force_model: BoatData
     particle_state: ParticleState
@@ -29,10 +34,12 @@ class SimulationState(typing.NamedTuple):
     sail_angle: float
     sail_sign: int
     debug_data: dict
-    
+
+
 @dataclass
 class MutableSimulationState:
     state: SimulationState
+
 
 def init_simulation_state():
     return SimulationState(
@@ -40,7 +47,7 @@ def init_simulation_state():
         particle_state=ParticleState(
             m=jnp.array(100.0),
             I=jnp.array(100.0),
-            x=jnp.array([0.0,0.0]),
+            x=jnp.array([0.0, 0.0]),
             xdot=jnp.array([0.0, 0.0]),
             theta=jnp.array(0.0),
             thetadot=jnp.array(0.0),
@@ -49,8 +56,9 @@ def init_simulation_state():
         sail_angle=0.0,
         sail_sign=1.0,
         wind_velocity=jnp.array([0.0, -4.0]),
-        debug_data=DUMMY_DEBUG_DATA
+        debug_data=DUMMY_DEBUG_DATA,
     )
+
 
 def step_uncontrolled(simulation_state: SimulationState, inner_dt) -> SimulationState:
     particle_state = simulation_state.particle_state
@@ -64,17 +72,23 @@ def step_uncontrolled(simulation_state: SimulationState, inner_dt) -> Simulation
         rudder_angle=simulation_state.rudder_angle,
     )
     # jax.debug.print("force {f}", f=f)
-    return simulation_state._replace(particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd)
+    return simulation_state._replace(
+        particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd
+    )
 
 
 def integrate_many(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
     body_fn = lambda i, rolled_state: step_uncontrolled(rolled_state, inner_dt)
     return jax.lax.fori_loop(0, N, body_fn, simulation_state)
 
+
 j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(1,))
 j_integrate_many = jax.jit(integrate_many, static_argnums=(2))
 
-def integrate_many_debug(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
+
+def integrate_many_debug(
+    simulation_state: SimulationState, inner_dt, N
+) -> SimulationState:
     for i in range(N):
         simulation_state = j_step_uncontrolled(simulation_state, inner_dt)
     return simulation_state
@@ -128,7 +142,6 @@ def run_demo():
         170, RESOLUTION - 100, 0, 0, width=2, color=(0, 255, 0)
     )
 
-
     def step_physics(dt):
         # t0=time.time()
         dt = min(0.1, dt)
@@ -137,11 +150,15 @@ def run_demo():
         if keys[pyglet.window.key.SPACE]:
             return
 
-        boat_vector = jnp.array([
-            jnp.cos(sim_state.particle_state.theta),
-            jnp.sin(sim_state.particle_state.theta),
-        ])
-        sim_state = sim_state._replace(sail_sign=-jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity)))
+        boat_vector = jnp.array(
+            [
+                jnp.cos(sim_state.particle_state.theta),
+                jnp.sin(sim_state.particle_state.theta),
+            ]
+        )
+        sim_state = sim_state._replace(
+            sail_sign=-jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity))
+        )
         sim_state = j_integrate_many(sim_state, dt / JAX_INNER_N, JAX_INNER_N)
         debug_data = sim_state.debug_data
         global_state.state = sim_state
@@ -151,7 +168,9 @@ def run_demo():
         rudder_moment_widget.angle = jnp.deg2rad(
             360 * debug_data["moments"]["rudder"] / 800
         )
-        sail_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["sail"] / 800)
+        sail_moment_widget.angle = jnp.deg2rad(
+            360 * debug_data["moments"]["sail"] / 800
+        )
         board_force_widget.x2 = board_force_widget.x + debug_data["forces"]["board"][0]
         board_force_widget.y2 = board_force_widget.y + debug_data["forces"]["board"][1]
         board_force_widget.x2 = board_force_widget.x + debug_data["forces"]["hull"][0]
