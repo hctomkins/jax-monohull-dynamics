@@ -1,8 +1,15 @@
-from monohull_dynamics.forces.polars.polar import PolarData, cl, cd0
-import jax.numpy as jnp
-from monohull_dynamics.forces.polars.polar import rho_water, water_re
 import typing
+
+import jax.numpy as jnp
 from jax import lax
+
+from monohull_dynamics.forces.polars.polar import (
+    PolarData,
+    cd0,
+    cl,
+    rho_water,
+    water_re,
+)
 
 
 class FoilData(typing.NamedTuple):
@@ -19,9 +26,7 @@ def area(foil_data: FoilData):
     return foil_data.length * foil_data.chord
 
 
-def foil_frame_resultant(
-    foil_data: FoilData, foil_frame_flow: jnp.ndarray
-) -> jnp.ndarray:
+def foil_frame_resultant(foil_data: FoilData, foil_frame_flow: jnp.ndarray) -> jnp.ndarray:
     mag = jnp.linalg.norm(foil_frame_flow)
     return lax.cond(
         mag < 1e-6,
@@ -31,9 +36,7 @@ def foil_frame_resultant(
     )
 
 
-def _foil_frame_resultant_unsafe(
-    foil_data: FoilData, foil_frame_flow: jnp.ndarray
-) -> jnp.ndarray:
+def _foil_frame_resultant_unsafe(foil_data: FoilData, foil_frame_flow: jnp.ndarray) -> jnp.ndarray:
     """
     Args:
         foil_frame_flow: [x, y] velocity of flow at foil where foil is at origin and pointing right,
@@ -51,22 +54,8 @@ def _foil_frame_resultant_unsafe(
     cd_tot = _cd + _cl**2 / (jnp.pi * aspect_ratio(foil_data))
     lift_dir = jnp.array([jnp.sin(alpha), jnp.cos(alpha)])
     drag_dir = foil_frame_flow / jnp.linalg.norm(foil_frame_flow)
-    lift = (
-        lift_dir
-        * 0.5
-        * _cl
-        * rho_water
-        * foil_data.chord
-        * jnp.linalg.norm(foil_frame_flow) ** 2
-    )
-    drag = (
-        drag_dir
-        * 0.5
-        * cd_tot
-        * rho_water
-        * foil_data.chord
-        * jnp.linalg.norm(foil_frame_flow) ** 2
-    )
+    lift = lift_dir * 0.5 * _cl * rho_water * foil_data.chord * jnp.linalg.norm(foil_frame_flow) ** 2
+    drag = drag_dir * 0.5 * cd_tot * rho_water * foil_data.chord * jnp.linalg.norm(foil_frame_flow) ** 2
     # jax.debug.print("lift: {lift}", lift=lift)
     # jax.debug.print("drag: {drag}", drag=drag)
     # print(

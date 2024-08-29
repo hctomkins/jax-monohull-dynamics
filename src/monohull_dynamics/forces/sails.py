@@ -1,6 +1,8 @@
-from monohull_dynamics.forces.polars.polar import rho_air
-import jax.numpy as jnp
 import typing
+
+import jax.numpy as jnp
+
+from monohull_dynamics.forces.polars.polar import rho_air
 
 FINN_CL_CD = {
     0: (0, 0.097),

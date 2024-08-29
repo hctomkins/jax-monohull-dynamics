@@ -1,9 +1,7 @@
 import jax.numpy as jnp
 
 
-def moments_about(
-    force: jnp.ndarray, at: jnp.ndarray, about: jnp.ndarray
-) -> jnp.ndarray:
+def moments_about(force: jnp.ndarray, at: jnp.ndarray, about: jnp.ndarray) -> jnp.ndarray:
     """
     Args:
         force: [x, y] force vector
@@ -24,15 +22,10 @@ def rotate_vector(vector: jnp.ndarray, theta: jnp.ndarray) -> jnp.ndarray:
     Returns:
         Rotated vector
     """
-    return (
-        jnp.array([[jnp.cos(theta), -jnp.sin(theta)], [jnp.sin(theta), jnp.cos(theta)]])
-        @ vector
-    )
+    return jnp.array([[jnp.cos(theta), -jnp.sin(theta)], [jnp.sin(theta), jnp.cos(theta)]]) @ vector
 
 
-def rotate_vector_about(
-    vector: jnp.ndarray, theta: jnp.ndarray, about: jnp.ndarray
-) -> jnp.ndarray:
+def rotate_vector_about(vector: jnp.ndarray, theta: jnp.ndarray, about: jnp.ndarray) -> jnp.ndarray:
     """
     Args:
         vector: [x, y] vector to rotate
@@ -44,9 +37,7 @@ def rotate_vector_about(
     return rotate_vector(vector - about, theta) + about
 
 
-def coe_offset(
-    foil_offset: jnp.ndarray, foil_theta: jnp.ndarray, coe: jnp.ndarray
-) -> jnp.ndarray:
+def coe_offset(foil_offset: jnp.ndarray, foil_theta: jnp.ndarray, coe: jnp.ndarray) -> jnp.ndarray:
     """
     Given the offset of the foil from the boat origin, the angle of the foil from the boat x-axis and
     the coe length of the foil, return the coe offset from the boat origin.
@@ -101,9 +92,7 @@ def flow_at_foil(
     coe = coe_offset(foil_offset, foil_theta, foil_coe)
     flow_world_space = flow_velocity - boat_velocity
     boat_space_directional_flow = rotate_vector(flow_world_space, -boat_theta)
-    boat_space_rotational_flow = -jnp.cross(
-        jnp.array([0, 0, boat_theta_dot]), jnp.array([coe[0], coe[1], 0])
-    )[0:2]
+    boat_space_rotational_flow = -jnp.cross(jnp.array([0, 0, boat_theta_dot]), jnp.array([coe[0], coe[1], 0]))[0:2]
     boat_space_total_flow = boat_space_directional_flow + boat_space_rotational_flow
     foil_flow = rotate_vector(boat_space_total_flow, -foil_theta)
     return foil_flow

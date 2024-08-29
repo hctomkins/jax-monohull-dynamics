@@ -1,7 +1,8 @@
-import jax.numpy as jnp
 import typing
-from monohull_dynamics.forces.polars.polar import rho_water
 
+import jax.numpy as jnp
+
+from monohull_dynamics.forces.polars.polar import rho_water
 
 # import matplotlib
 # from scipy.optimize import curve_fit
@@ -203,9 +204,7 @@ def init_hull(hull_draft: jnp.ndarray, beam: jnp.ndarray, lwl: jnp.ndarray):
     )
 
 
-def displacement_wave_drag(
-    hull_data: HullData, coeffs: dict[str, jnp.ndarray], fn: jnp.ndarray
-) -> jnp.ndarray:
+def displacement_wave_drag(hull_data: HullData, coeffs: dict[str, jnp.ndarray], fn: jnp.ndarray) -> jnp.ndarray:
     _lcb = lcb(hull_data.lwl)
     _lcf = lcf(hull_data.lwl)
     _bwl = bwl(hull_data.beam)
@@ -222,20 +221,12 @@ def displacement_wave_drag(
             + a4(coeffs, fn) * _bwl / hull_data.lwl
         )
         + (_volume_of_displacement ** (1 / 3) / hull_data.lwl)
-        * (
-            a5(coeffs, fn) * _lcb / _lcf
-            + a6(coeffs, fn) * _bwl / hull_data.hull_draft
-            + a7(coeffs, fn) * hull_data.midship_section_coefficient
-        )
+        * (a5(coeffs, fn) * _lcb / _lcf + a6(coeffs, fn) * _bwl / hull_data.hull_draft + a7(coeffs, fn) * hull_data.midship_section_coefficient)
     )
-    return jnp.clip(
-        _volume_of_displacement * rho_water * 9.81 * dimensionless_drag, min=0, max=None
-    )
+    return jnp.clip(_volume_of_displacement * rho_water * 9.81 * dimensionless_drag, min=0, max=None)
 
 
-def wave_drag(
-    hull_data: HullData, coeffs: dict[str, jnp.ndarray], velocity: jnp.ndarray
-) -> jnp.ndarray:
+def wave_drag(hull_data: HullData, coeffs: dict[str, jnp.ndarray], velocity: jnp.ndarray) -> jnp.ndarray:
     speed = jnp.linalg.norm(velocity)
     fn = speed / jnp.sqrt(9.81 * hull_data.lwl)
     drag_magnitude = displacement_wave_drag(hull_data, coeffs, fn)
@@ -247,14 +238,7 @@ def viscous_drag(hull_data: HullData, velocity: jnp.ndarray) -> jnp.ndarray:
     _bwl = bwl(hull_data.beam)
     _awp = awp(hull_data.lwl, _bwl)
     speed = jnp.linalg.norm(velocity)
-    drag_magnitude = (
-        1
-        / 2
-        * rho_water
-        * speed**2
-        * _awp
-        * skin_friction_coefficient(hull_data.lwl, speed)
-    )
+    drag_magnitude = 1 / 2 * rho_water * speed**2 * _awp * skin_friction_coefficient(hull_data.lwl, speed)
     drag_direction = -velocity / (speed + 1e-3)
     return drag_magnitude * drag_direction
 
@@ -286,8 +270,8 @@ def volume_of_displacement(awp: jnp.ndarray, hull_draft: jnp.ndarray):
 
 
 if __name__ == "__main__":
-    from matplotlib import pyplot as plt
     from jax import jit, vmap
+    from matplotlib import pyplot as plt
 
     speeds = jnp.array([[0, s] for s in jnp.linspace(0, 15, 100)])
     hull_data = init_hull(hull_draft=0.2, beam=1.4, lwl=3.58)

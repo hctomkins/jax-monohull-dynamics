@@ -1,9 +1,10 @@
 import glob
-import pandas as pd
 import os
-from pathlib import Path
-import jax.numpy as jnp
 import typing
+from pathlib import Path
+
+import jax.numpy as jnp
+import pandas as pd
 
 POLAR_ROOT = Path(__file__).parent
 

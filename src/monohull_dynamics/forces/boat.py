@@ -1,13 +1,14 @@
-from monohull_dynamics.forces.foils import FoilData, foil_frame_resultant
-from monohull_dynamics.forces.force_utils import flow_at_foil, foil_force_on_boat
-import jax.numpy as jnp
 import typing
 
+import jax.numpy as jnp
+
+from monohull_dynamics.forces.foils import FoilData, foil_frame_resultant
+from monohull_dynamics.forces.force_utils import flow_at_foil, foil_force_on_boat
 from monohull_dynamics.forces.hull import (
     HullData,
-    wave_drag,
-    viscous_drag,
     get_hull_coeffs,
+    viscous_drag,
+    wave_drag,
 )
 from monohull_dynamics.forces.polars.polar import init_polar
 from monohull_dynamics.forces.sails import (
@@ -209,6 +210,7 @@ def init_firefly():
 
 if __name__ == "__main__":
     import time
+
     from jax import jit
 
     boat = init_firefly()

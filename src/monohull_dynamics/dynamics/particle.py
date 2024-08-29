@@ -1,6 +1,7 @@
-import jax.numpy as jnp
-import jax
 import typing
+
+import jax
+import jax.numpy as jnp
 
 
 class ParticleState(typing.NamedTuple):

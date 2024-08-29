@@ -1,16 +1,16 @@
+import typing
 from dataclasses import dataclass
 
-import pyglet
-import typing
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
+import pyglet
 
 from monohull_dynamics.dynamics.particle import ParticleState, integrate
 from monohull_dynamics.forces.boat import (
-    BoatData,
-    init_firefly,
-    forces_and_moments,
     DUMMY_DEBUG_DATA,
+    BoatData,
+    forces_and_moments,
+    init_firefly,
 )
 
 RESOLUTION = 800
@@ -72,9 +72,7 @@ def step_uncontrolled(simulation_state: SimulationState, inner_dt) -> Simulation
         rudder_angle=simulation_state.rudder_angle,
     )
     # jax.debug.print("force {f}", f=f)
-    return simulation_state._replace(
-        particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd
-    )
+    return simulation_state._replace(particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd)
 
 
 def integrate_many(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
@@ -86,9 +84,7 @@ j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(1,))
 j_integrate_many = jax.jit(integrate_many, static_argnums=(2))
 
 
-def integrate_many_debug(
-    simulation_state: SimulationState, inner_dt, N
-) -> SimulationState:
+def integrate_many_debug(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
     for i in range(N):
         simulation_state = j_step_uncontrolled(simulation_state, inner_dt)
     return simulation_state
@@ -122,25 +118,13 @@ def run_demo():
     global_state = MutableSimulationState(state=init_simulation_state())
 
     # Debug data
-    board_moment_widget = pyglet.shapes.Sector(
-        x=30, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(255, 0, 0)
-    )
-    rudder_moment_widget = pyglet.shapes.Sector(
-        x=100, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(0, 0, 255)
-    )
-    sail_moment_widget = pyglet.shapes.Sector(
-        x=170, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(0, 255, 0)
-    )
+    board_moment_widget = pyglet.shapes.Sector(x=30, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(255, 0, 0))
+    rudder_moment_widget = pyglet.shapes.Sector(x=100, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(0, 0, 255))
+    sail_moment_widget = pyglet.shapes.Sector(x=170, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(0, 255, 0))
 
-    board_force_widget = pyglet.shapes.Line(
-        30, RESOLUTION - 100, 0, 0, width=2, color=(255, 0, 0)
-    )
-    rudder_force_widget = pyglet.shapes.Line(
-        100, RESOLUTION - 100, 0, 0, width=2, color=(0, 0, 255)
-    )
-    sail_force_widget = pyglet.shapes.Line(
-        170, RESOLUTION - 100, 0, 0, width=2, color=(0, 255, 0)
-    )
+    board_force_widget = pyglet.shapes.Line(30, RESOLUTION - 100, 0, 0, width=2, color=(255, 0, 0))
+    rudder_force_widget = pyglet.shapes.Line(100, RESOLUTION - 100, 0, 0, width=2, color=(0, 0, 255))
+    sail_force_widget = pyglet.shapes.Line(170, RESOLUTION - 100, 0, 0, width=2, color=(0, 255, 0))
 
     def step_physics(dt):
         # t0=time.time()
@@ -156,31 +140,19 @@ def run_demo():
                 jnp.sin(sim_state.particle_state.theta),
             ]
         )
-        sim_state = sim_state._replace(
-            sail_sign=-jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity))
-        )
+        sim_state = sim_state._replace(sail_sign=-jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity)))
         sim_state = j_integrate_many(sim_state, dt / JAX_INNER_N, JAX_INNER_N)
         debug_data = sim_state.debug_data
         global_state.state = sim_state
-        board_moment_widget.angle = jnp.deg2rad(
-            360 * debug_data["moments"]["board"] / 800
-        )
-        rudder_moment_widget.angle = jnp.deg2rad(
-            360 * debug_data["moments"]["rudder"] / 800
-        )
-        sail_moment_widget.angle = jnp.deg2rad(
-            360 * debug_data["moments"]["sail"] / 800
-        )
+        board_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["board"] / 800)
+        rudder_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["rudder"] / 800)
+        sail_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["sail"] / 800)
         board_force_widget.x2 = board_force_widget.x + debug_data["forces"]["board"][0]
         board_force_widget.y2 = board_force_widget.y + debug_data["forces"]["board"][1]
         board_force_widget.x2 = board_force_widget.x + debug_data["forces"]["hull"][0]
         board_force_widget.y2 = board_force_widget.y + debug_data["forces"]["hull"][1]
-        rudder_force_widget.x2 = (
-            rudder_force_widget.x + debug_data["forces"]["rudder"][0]
-        )
-        rudder_force_widget.y2 = (
-            rudder_force_widget.y + debug_data["forces"]["rudder"][1]
-        )
+        rudder_force_widget.x2 = rudder_force_widget.x + debug_data["forces"]["rudder"][0]
+        rudder_force_widget.y2 = rudder_force_widget.y + debug_data["forces"]["rudder"][1]
         sail_force_widget.x2 = sail_force_widget.x + debug_data["forces"]["sail"][0]
         sail_force_widget.y2 = sail_force_widget.y + debug_data["forces"]["sail"][1]
 
@@ -217,16 +189,12 @@ def run_demo():
         rudder_position = world_to_canvas(sim_state.particle_state.x)
         ego_rudder.x = rudder_position[0]
         ego_rudder.y = rudder_position[1]
-        ego_rudder.rotation = -jnp.rad2deg(
-            sim_state.particle_state.theta + sim_state.rudder_angle
-        )
+        ego_rudder.rotation = -jnp.rad2deg(sim_state.particle_state.theta + sim_state.rudder_angle)
         ego_rudder.draw()
         sail_position = world_to_canvas(sim_state.particle_state.x)
         ego_sail.x = sail_position[0]
         ego_sail.y = sail_position[1]
-        ego_sail.rotation = -jnp.rad2deg(
-            sim_state.particle_state.theta + sim_state.sail_angle
-        )
+        ego_sail.rotation = -jnp.rad2deg(sim_state.particle_state.theta + sim_state.sail_angle)
         ego_sail.draw()
         board_moment_widget.draw()
         rudder_moment_widget.draw()
