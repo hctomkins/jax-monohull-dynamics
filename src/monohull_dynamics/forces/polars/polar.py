@@ -2,7 +2,8 @@ import glob
 import pandas as pd
 import os
 from pathlib import Path
-import numpy as np
+import jax.numpy as jnp
+import typing
 
 POLAR_ROOT = Path(__file__).parent
 
@@ -24,73 +25,107 @@ def air_re(v, l):
 rho_air = 1.27
 rho_water = 1000
 
-alphas_by_re = dict()
-cd_by_re = dict()
-cl_by_re = dict()
+
+class PolarData(typing.NamedTuple):
+    all_re: jnp.ndarray  # [n_re]
+    alphas_by_re: jnp.ndarray  # [n_re, n_alpha]
+    cd_by_re: jnp.ndarray  # [n_re, n_alpha]
+    cl_by_re: jnp.ndarray  # [n_re, n_alpha]
 
 
-class Polar:
-    def __init__(self, dir: str | None):
-        if dir is None:
-            self.alpha_min = 0
-            self.alpha_max = 0
-        else:
-            dfs = []
-            for f in glob.glob(os.path.join(POLAR_ROOT, dir, "*.csv")):
-                stem = Path(f).stem
-                (
-                    _xf,
-                    _naca,
-                    _il,
-                    re,
-                    _ncsv,
-                ) = stem.split("-")
-                re = int(re)
-                data = pd.read_csv(f, header=9)
-                alphas_by_re[re] = np.array(data["Alpha"]).astype(np.float32)
-                cd_by_re[re] = np.array(data["Cd"]).astype(np.float32)
-                cl_by_re[re] = np.array(data["Cl"]).astype(np.float32)
+def init_polar(dir: str | None):
+    assert dir is not None
+    cd_arrays = []
+    cl_arrays = []
+    alphas = []
+    all_re: list[int] = []
+    # Return interpolated array of:
+    # alphas [n_re, n_alpha]
+    # cd [n_re, n_alpha]
+    # cl [n_re, n_alpha]
+    # all_re [n_re]
+    # Where we pad the end of each array with duplicate data
 
-            self.all_re = np.array(list(alphas_by_re.keys()))
-            self.alpha_min = np.max(
-                [np.min(alphas) for alphas in alphas_by_re.values()]
-            )
-            self.alpha_max = np.min(
-                [np.max(alphas) for alphas in alphas_by_re.values()]
-            )
+    for f in glob.glob(os.path.join(POLAR_ROOT, dir, "*.csv")):
+        stem = Path(f).stem
+        (
+            _xf,
+            _naca,
+            _il,
+            re,
+            _ncsv,
+        ) = stem.split("-")
+        re = int(re)
+        all_re.append(re)
+        data = pd.read_csv(f, header=9)
+        alphas.append(jnp.array(data["Alpha"]).astype(jnp.float32))
+        cd_arrays.append(jnp.array(data["Cd"]).astype(jnp.float32))
+        cl_arrays.append(jnp.array(data["Cl"]).astype(jnp.float32))
 
-    def cd0(self, re: int):
-        return self.cd(re, 0)
+    max_alphas = max(len(a) for a in alphas)
+    for i, re in enumerate(all_re):
+        padding = max_alphas - len(alphas[i])
+        alphas[i] = jnp.pad(alphas[i], (0, padding), mode="edge")
+        cd_arrays[i] = jnp.pad(cd_arrays[i], (0, padding), mode="edge")
+        cl_arrays[i] = jnp.pad(cl_arrays[i], (0, padding), mode="edge")
 
-    def cd(self, re: int, alpha_deg):
-        if alpha_deg <= self.alpha_min or alpha_deg >= self.alpha_max:
-            # TODO: should this terminate at 2 or 1.24? Flat plate in 2d or 3d?
-            return (1 - np.cos(np.deg2rad(alpha_deg) * 2)) * 0.6
+    return PolarData(
+        all_re=jnp.array(all_re, dtype=jnp.float32),
+        alphas_by_re=jnp.stack(alphas, dtype=jnp.float32),
+        cd_by_re=jnp.stack(cd_arrays, dtype=jnp.float32),
+        cl_by_re=jnp.stack(cl_arrays, dtype=jnp.float32),
+    )
 
-        re = self.nearest_re(re)
-        return np.interp(alpha_deg, alphas_by_re[re], cd_by_re[re])
 
-    def cl(self, re: int, alpha_deg):
-        print(alpha_deg)
-        if alpha_deg <= self.alpha_min or alpha_deg >= self.alpha_max:
-            return np.sin(np.deg2rad(alpha_deg) * 2)
+def cd0(polar_data: PolarData, re):
+    return cd(polar_data, re, 0)
 
-        re = self.nearest_re(re)
-        return np.interp(alpha_deg, alphas_by_re[re], cl_by_re[re])
 
-    def nearest_re(self, re: int):
-        return self.all_re[np.argmin(np.abs(self.all_re - re))]
+def cd(polar_data: PolarData, re, alpha_deg):
+    re = re_index(polar_data, re)
+    left_right_val = (1 - jnp.cos(jnp.deg2rad(alpha_deg) * 2)) * 0.6
+    return jnp.interp(
+        alpha_deg,
+        polar_data.alphas_by_re[re],
+        polar_data.cd_by_re[re],
+        left=left_right_val,
+        right=left_right_val,
+    )
+
+
+def cl(polar_data: PolarData, re, alpha_deg):
+    re = re_index(polar_data, re)
+    left_right_val = jnp.sin(jnp.deg2rad(alpha_deg) * 2)
+
+    return jnp.interp(
+        alpha_deg,
+        polar_data.alphas_by_re[re],
+        polar_data.cl_by_re[re],
+        left=left_right_val,
+        right=left_right_val,
+    )
+
+
+def re_index(polar_data: PolarData, re: jnp.ndarray):
+    return jnp.argmin(jnp.abs(polar_data.all_re - re))
 
 
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
 
-    p = Polar("n12")
+    polar_data = init_polar("n12")
     re = water_re(knts_to_ms(4), 0.2)
-    print(re)
-    print(p.cd0(re))
-    print(p.cl(re, 10))
 
-    alphas = np.linspace(-90, 90, 100)
-    plt.plot(alphas, [p.cd(re, a) for a in alphas])
+    print(cd0(polar_data, re))
+    print(cl(polar_data, re, 10))
+
+    alphas = jnp.linspace(-90, 90, 100)
+    for re in [
+        water_re(knts_to_ms(4), 0.2),
+        water_re(knts_to_ms(40), 0.2),
+        water_re(knts_to_ms(0.4), 0.2),
+    ]:
+        plt.plot(alphas, [cd(polar_data, re, a) for a in alphas], label=f"Re={re}")
+
+    plt.legend()
     plt.show()

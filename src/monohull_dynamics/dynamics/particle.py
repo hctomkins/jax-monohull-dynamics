@@ -1,40 +1,48 @@
-import numpy as np
-import time
+import jax.numpy as jnp
+import jax
+import typing
 
 
-class Particle2D:
-    def __init__(
-        self,
-        m,
-        I,
-        x: tuple[float, float],
-        xdot: tuple[float, float],
-        theta: float,
-        thetadot: float,
-    ):
-        # Theta anticlockwise from x axis
-        self.m = m
-        self.I = I
-        self.x = np.array(x)
-        self.xdot = np.array(xdot)
-        self.theta = theta
-        self.thetadot = thetadot
+class ParticleState(typing.NamedTuple):
+    m: jnp.ndarray
+    I: jnp.ndarray
+    x: jnp.ndarray
+    xdot: jnp.ndarray
+    theta: jnp.ndarray
+    thetadot: jnp.ndarray
 
-    def step(self, force: tuple[float, float], moment: float, dt):
-        """
-        Step dt with semi implicit Euler
-        """
-        if np.any(np.isnan(force)):
-            raise ValueError("Force is nan")
 
-        # a
-        xdotdot = np.array(force) / self.m
-        thetadotdot = moment / self.I
+@jax.jit
+def integrate(
+    particle_state: ParticleState,
+    force: jnp.ndarray,
+    moment: jnp.ndarray,
+    dt: jnp.ndarray,
+):
+    """
+    Step dt with semi implicit Euler
+    """
+    # Force [2], moment []
+    # if jnp.any(jnp.isnan(force)):
+    #     raise ValueError("Force is nan")
 
-        # v
-        self.xdot += xdotdot * dt
-        self.thetadot += thetadotdot * dt
+    # a
+    xdotdot = force / particle_state.m
+    thetadotdot = moment / particle_state.I
 
-        # x
-        self.x += self.xdot * dt
-        self.theta += self.thetadot * dt
+    # v
+    new_xdot = particle_state.xdot + xdotdot * dt
+    new_thetadot = particle_state.thetadot + thetadotdot * dt
+
+    # x
+    new_x = particle_state.x + new_xdot * dt
+    new_theta = particle_state.theta + new_thetadot * dt
+
+    return ParticleState(
+        m=particle_state.m,
+        I=particle_state.I,
+        x=new_x,
+        xdot=new_xdot,
+        theta=new_theta,
+        thetadot=new_thetadot,
+    )
