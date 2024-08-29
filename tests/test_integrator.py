@@ -15,7 +15,6 @@ def init_state(x: jnp.ndarray):
 
 
 def test_integrate():
-    x0 = jnp.array([0.0, 0.0])
     state = init_state(jnp.array(0.0))
     force = jnp.array([1.0, 0.0])
     moment = jnp.array([0.0])

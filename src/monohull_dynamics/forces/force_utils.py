@@ -1,5 +1,4 @@
 import jax.numpy as jnp
-import numpy as np
 
 
 def moments_about(

@@ -3,7 +3,6 @@ import jax.numpy as jnp
 from monohull_dynamics.forces.polars.polar import rho_water, water_re
 import typing
 from jax import lax
-import jax.debug
 
 
 class FoilData(typing.NamedTuple):

@@ -3,11 +3,8 @@ from monohull_dynamics.demo.demo import (
     integrate_many,
     init_simulation_state,
 )
-from monohull_dynamics.dynamics.particle import ParticleState, integrate
-from monohull_dynamics.forces.boat import init_firefly, forces_and_moments
 import jax.numpy as jnp
 from jax import jit
-import jax
 import time
 
 

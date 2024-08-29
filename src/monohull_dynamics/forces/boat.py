@@ -2,7 +2,6 @@ from monohull_dynamics.forces.foils import FoilData, foil_frame_resultant
 from monohull_dynamics.forces.force_utils import flow_at_foil, foil_force_on_boat
 import jax.numpy as jnp
 import typing
-import jax
 
 from monohull_dynamics.forces.hull import (
     HullData,
