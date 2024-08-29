@@ -12,8 +12,8 @@ from monohull_dynamics.forces.boat import BoatData, init_firefly, forces_and_mom
 RESOLUTION = 800
 SCALE_M = 30
 
-PYTHON_DT = 0.001
-JAX_INNER_N = 1
+PYTHON_DT = 0.01
+JAX_INNER_N = 10
 
 
 def center_image(image):
