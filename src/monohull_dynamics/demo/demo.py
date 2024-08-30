@@ -1,9 +1,11 @@
 import typing
 from dataclasses import dataclass
+import time
 
 import jax.numpy as jnp
 import pyglet
 
+from monohull_dynamics.dynamics.boat import j_integrate_many
 from monohull_dynamics.dynamics.particle import BoatState, ParticleState
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
@@ -28,7 +30,6 @@ class SimulationState(typing.NamedTuple):
     force_model: BoatData
     boat_state: BoatState
     wind_velocity: jnp.ndarray
-    debug_data: dict
 
 
 @dataclass
@@ -50,9 +51,9 @@ def init_simulation_state():
             ),
             rudder_angle=0.0,
             sail_angle=0.0,
+            debug_data=DUMMY_DEBUG_DATA,
         ),
         wind_velocity=jnp.array([0.0, -4.0]),
-        debug_data=DUMMY_DEBUG_DATA,
     )
 
 
@@ -92,16 +93,39 @@ def run_demo():
     rudder_force_widget = pyglet.shapes.Line(100, RESOLUTION - 100, 0, 0, width=2, color=(0, 0, 255))
     sail_force_widget = pyglet.shapes.Line(170, RESOLUTION - 100, 0, 0, width=2, color=(0, 255, 0))
 
+    # Time and position text
+    time_label = pyglet.text.Label(
+        "Time: 0",
+        font_name="Times New Roman",
+        font_size=12,
+        x=10,
+        y=10,
+        anchor_x="left",
+        anchor_y="bottom",
+    )
+    position_label = pyglet.text.Label(
+        "Position: 0",
+        font_name="Times New Roman",
+        font_size=12,
+        x=10,
+        y=30,
+        anchor_x="left",
+        anchor_y="bottom",
+    )
+    start_time = time.time()
+
     def step_physics(dt):
         # t0=time.time()
         dt = min(0.1, dt)
         sim_state = global_state.state
+        boat_state = sim_state.boat_state
 
         if keys[pyglet.window.key.SPACE]:
             return
 
-        sim_state = j_integrate_many(sim_state, dt / JAX_INNER_N, JAX_INNER_N)
-        debug_data = sim_state.debug_data
+        boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)
+        sim_state = sim_state._replace(boat_state=boat_state)
+        debug_data = sim_state.boat_state.debug_data
         global_state.state = sim_state
         board_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["board"] / 800)
         rudder_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["rudder"] / 800)
@@ -166,6 +190,12 @@ def run_demo():
         ego_sail.y = sail_position[1]
         ego_sail.rotation = -jnp.rad2deg(particle_state.theta + boat_state.sail_angle)
         ego_sail.draw()
+
+        time_label.text = f"Time: {time.time() - start_time:.2f}"
+        position_label.text = f"Position: {particle_state.x[0]:.2f}, {particle_state.x[1]:.2f}"
+        time_label.draw()
+        position_label.draw()
+
         board_moment_widget.draw()
         rudder_moment_widget.draw()
         sail_moment_widget.draw()
