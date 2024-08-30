@@ -4,7 +4,6 @@ import jax
 import jax.numpy as jnp
 
 
-
 class ParticleState(typing.NamedTuple):
     m: jnp.ndarray
     I: jnp.ndarray

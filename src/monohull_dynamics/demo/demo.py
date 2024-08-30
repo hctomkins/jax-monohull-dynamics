@@ -1,15 +1,13 @@
 import typing
 from dataclasses import dataclass
 
-import jax
 import jax.numpy as jnp
 import pyglet
 
-from monohull_dynamics.dynamics.particle import ParticleState, integrate, BoatState
+from monohull_dynamics.dynamics.particle import BoatState, ParticleState
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
     BoatData,
-    forces_and_moments,
     init_firefly,
 )
 
@@ -56,39 +54,6 @@ def init_simulation_state():
         wind_velocity=jnp.array([0.0, -4.0]),
         debug_data=DUMMY_DEBUG_DATA,
     )
-
-
-def step_uncontrolled(simulation_state: SimulationState, inner_dt) -> SimulationState:
-    particle_state = simulation_state.boat_state.particle_state
-    boat_state = simulation_state.boat_state
-
-    f, m, dd = forces_and_moments(
-        boat_data=simulation_state.force_model,
-        boat_velocity=particle_state.xdot,
-        wind_velocity=simulation_state.wind_velocity,
-        boat_theta=particle_state.theta,
-        boat_theta_dot=particle_state.thetadot,
-        sail_angle=boat_state.sail_angle,
-        rudder_angle=boat_state.rudder_angle,
-    )
-    new_boat_state = boat_state._replace(particle_state=integrate(particle_state, f, m, inner_dt))
-    # jax.debug.print("force {f}", f=f)
-    return simulation_state._replace(boat_state=new_boat_state, debug_data=dd)
-
-
-def integrate_many(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
-    body_fn = lambda i, rolled_state: step_uncontrolled(rolled_state, inner_dt)
-    return jax.lax.fori_loop(0, N, body_fn, simulation_state)
-
-
-j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(1,))
-j_integrate_many = jax.jit(integrate_many, static_argnums=(2))
-
-
-def integrate_many_debug(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
-    for i in range(N):
-        simulation_state = j_step_uncontrolled(simulation_state, inner_dt)
-    return simulation_state
 
 
 def world_to_canvas(position: jnp.ndarray) -> jnp.ndarray:
