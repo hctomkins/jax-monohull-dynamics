@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 
 
+
 class ParticleState(typing.NamedTuple):
     m: jnp.ndarray
     I: jnp.ndarray
@@ -12,6 +13,10 @@ class ParticleState(typing.NamedTuple):
     theta: jnp.ndarray
     thetadot: jnp.ndarray
 
+class BoatState(typing.NamedTuple):
+    particle_state: ParticleState
+    rudder_angle: jnp.ndarray
+    sail_angle: jnp.ndarray
 
 @jax.jit
 def integrate(
@@ -19,7 +24,7 @@ def integrate(
     force: jnp.ndarray,
     moment: jnp.ndarray,
     dt: jnp.ndarray,
-):
+) -> ParticleState:
     """
     Step dt with semi implicit Euler
     """

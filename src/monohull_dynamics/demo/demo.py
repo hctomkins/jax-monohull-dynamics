@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 import pyglet
 
-from monohull_dynamics.dynamics.particle import ParticleState, integrate
+from monohull_dynamics.dynamics.particle import ParticleState, integrate, BoatState
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
     BoatData,
@@ -28,11 +28,8 @@ def center_image(image):
 
 class SimulationState(typing.NamedTuple):
     force_model: BoatData
-    particle_state: ParticleState
+    boat_state: BoatState
     wind_velocity: jnp.ndarray
-    rudder_angle: float
-    sail_angle: float
-    sail_sign: int
     debug_data: dict
 
 
@@ -44,35 +41,39 @@ class MutableSimulationState:
 def init_simulation_state():
     return SimulationState(
         force_model=init_firefly(),
-        particle_state=ParticleState(
-            m=jnp.array(100.0),
-            I=jnp.array(100.0),
-            x=jnp.array([0.0, 0.0]),
-            xdot=jnp.array([0.0, 0.0]),
-            theta=jnp.array(0.0),
-            thetadot=jnp.array(0.0),
+        boat_state=BoatState(
+            particle_state=ParticleState(
+                m=jnp.array(100.0),
+                I=jnp.array(100.0),
+                x=jnp.array([0.0, 0.0]),
+                xdot=jnp.array([0.0, 0.0]),
+                theta=jnp.array(0.0),
+                thetadot=jnp.array(0.0),
+            ),
+            rudder_angle=0.0,
+            sail_angle=0.0,
         ),
-        rudder_angle=0.0,
-        sail_angle=0.0,
-        sail_sign=1.0,
         wind_velocity=jnp.array([0.0, -4.0]),
         debug_data=DUMMY_DEBUG_DATA,
     )
 
 
 def step_uncontrolled(simulation_state: SimulationState, inner_dt) -> SimulationState:
-    particle_state = simulation_state.particle_state
+    particle_state = simulation_state.boat_state.particle_state
+    boat_state = simulation_state.boat_state
+
     f, m, dd = forces_and_moments(
         boat_data=simulation_state.force_model,
         boat_velocity=particle_state.xdot,
         wind_velocity=simulation_state.wind_velocity,
         boat_theta=particle_state.theta,
         boat_theta_dot=particle_state.thetadot,
-        sail_angle=simulation_state.sail_angle,
-        rudder_angle=simulation_state.rudder_angle,
+        sail_angle=boat_state.sail_angle,
+        rudder_angle=boat_state.rudder_angle,
     )
+    new_boat_state = boat_state._replace(particle_state=integrate(particle_state, f, m, inner_dt))
     # jax.debug.print("force {f}", f=f)
-    return simulation_state._replace(particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd)
+    return simulation_state._replace(boat_state=new_boat_state, debug_data=dd)
 
 
 def integrate_many(simulation_state: SimulationState, inner_dt, N) -> SimulationState:
@@ -134,13 +135,6 @@ def run_demo():
         if keys[pyglet.window.key.SPACE]:
             return
 
-        boat_vector = jnp.array(
-            [
-                jnp.cos(sim_state.particle_state.theta),
-                jnp.sin(sim_state.particle_state.theta),
-            ]
-        )
-        sim_state = sim_state._replace(sail_sign=-jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity)))
         sim_state = j_integrate_many(sim_state, dt / JAX_INNER_N, JAX_INNER_N)
         debug_data = sim_state.debug_data
         global_state.state = sim_state
@@ -162,39 +156,50 @@ def run_demo():
     def on_draw():
         window.clear()
         sim_state = global_state.state
+        boat_state = sim_state.boat_state
+        particle_state = sim_state.boat_state.particle_state
+        boat_vector = jnp.array(
+            [
+                jnp.cos(particle_state.theta),
+                jnp.sin(particle_state.theta),
+            ]
+        )
+        sail_sign = -jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity))
+
         if keys[pyglet.window.key.LEFT]:
-            new_rudder = sim_state.rudder_angle - jnp.deg2rad(2)
+            new_rudder = boat_state.rudder_angle - jnp.deg2rad(2)
             new_rudder = max(-jnp.pi / 4, new_rudder)
         elif keys[pyglet.window.key.RIGHT]:
-            new_rudder = sim_state.rudder_angle + jnp.deg2rad(2)
+            new_rudder = boat_state.rudder_angle + jnp.deg2rad(2)
             new_rudder = min(jnp.pi / 4, new_rudder)
         else:
-            new_rudder = sim_state.rudder_angle
+            new_rudder = boat_state.rudder_angle
 
         if keys[pyglet.window.key.UP]:
-            new_sail = jnp.pi / 16 * sim_state.sail_sign
+            new_sail = jnp.pi / 16 * sail_sign
         elif keys[pyglet.window.key.DOWN]:
-            new_sail = jnp.pi / 2 * sim_state.sail_sign
+            new_sail = jnp.pi / 2 * sail_sign
         else:
-            new_sail = jnp.pi / 4 * sim_state.sail_sign
+            new_sail = jnp.pi / 4 * sail_sign
 
-        sim_state = sim_state._replace(rudder_angle=new_rudder, sail_angle=new_sail)
+        new_boat_state = boat_state._replace(rudder_angle=new_rudder, sail_angle=new_sail)
+        sim_state = sim_state._replace(boat_state=new_boat_state)
         global_state.state = sim_state
 
-        sprite_position = world_to_canvas(sim_state.particle_state.x)
+        sprite_position = world_to_canvas(particle_state.x)
         ego_sprite.x = sprite_position[0]
         ego_sprite.y = sprite_position[1]
-        ego_sprite.rotation = 90 - jnp.rad2deg(sim_state.particle_state.theta)
+        ego_sprite.rotation = 90 - jnp.rad2deg(particle_state.theta)
         ego_sprite.draw()
-        rudder_position = world_to_canvas(sim_state.particle_state.x)
+        rudder_position = world_to_canvas(particle_state.x)
         ego_rudder.x = rudder_position[0]
         ego_rudder.y = rudder_position[1]
-        ego_rudder.rotation = -jnp.rad2deg(sim_state.particle_state.theta + sim_state.rudder_angle)
+        ego_rudder.rotation = -jnp.rad2deg(particle_state.theta + boat_state.rudder_angle)
         ego_rudder.draw()
-        sail_position = world_to_canvas(sim_state.particle_state.x)
+        sail_position = world_to_canvas(particle_state.x)
         ego_sail.x = sail_position[0]
         ego_sail.y = sail_position[1]
-        ego_sail.rotation = -jnp.rad2deg(sim_state.particle_state.theta + sim_state.sail_angle)
+        ego_sail.rotation = -jnp.rad2deg(particle_state.theta + boat_state.sail_angle)
         ego_sail.draw()
         board_moment_widget.draw()
         rudder_moment_widget.draw()
