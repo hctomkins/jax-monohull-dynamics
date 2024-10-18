@@ -2,7 +2,7 @@ import typing
 
 import jax.numpy as jnp
 
-from monohull_dynamics.forces.polars.polar import rho_air
+from monohull_dynamics.forces.polars.polar import rho_air, fast_interp
 
 FINN_CL_CD = {
     0: (0, 0.097),
@@ -57,8 +57,8 @@ def sail_frame_resultant(sail_data: SailData, flow: jnp.array):
     alpha = jnp.arctan2(flow[1], -flow[0])
     alpha_sign = jnp.sign(alpha)
     alpha_abs_deg = jnp.abs(jnp.rad2deg(alpha))
-    cl = jnp.interp(alpha_abs_deg, sail_data.alphas, sail_data.cl)
-    cd = jnp.interp(alpha_abs_deg, sail_data.alphas, sail_data.cd)
+    cl = fast_interp(alpha_abs_deg, sail_data.alphas, sail_data.cl, left=sail_data.cl[0], right=sail_data.cl[-1])
+    cd = fast_interp(alpha_abs_deg, sail_data.alphas, sail_data.cd, left=sail_data.cd[0], right=sail_data.cd[-1])
     lift_dir = jnp.stack([jnp.sin(alpha), jnp.cos(alpha)]) * alpha_sign
     drag_dir = jnp.array(flow) / jnp.linalg.norm(flow)
     lift = lift_dir * 0.5 * cl * rho_air * sail_data.area * jnp.linalg.norm(flow) ** 2

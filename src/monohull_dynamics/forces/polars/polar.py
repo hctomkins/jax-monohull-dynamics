@@ -34,6 +34,42 @@ class PolarData(typing.NamedTuple):
     cl_by_re: jnp.ndarray  # [n_re, n_alpha]
 
 
+def fast_interp(x, xp, fp, left=None, right=None):
+    """Drop-in replacement for jnp.interp that is faster for small arrays,
+    using jnp.searchsorted with method='compare_all'."""
+    x = jnp.asarray(x)
+    xp = jnp.asarray(xp)
+    fp = jnp.asarray(fp)
+
+    # Use searchsorted with method='compare_all'
+    indices = jnp.searchsorted(xp, x, side='left', method='compare_all')
+
+    # Adjust indices to get the index of the left point
+    indices = jnp.clip(indices - 1, 0, len(xp) - 2)
+
+    # Gather points for interpolation
+    x0 = xp[indices]
+    x1 = xp[indices + 1]
+    y0 = fp[indices]
+    y1 = fp[indices + 1]
+
+    # Compute slopes
+    dx = x1 - x0
+    slope = (y1 - y0) / dx
+
+    # Avoid division by zero
+    slope = jnp.where(dx != 0, slope, 0.0)
+
+    # Compute interpolated values
+    y = y0 + slope * (x - x0)
+
+    # Handle extrapolation
+    y = jnp.where(x < xp[0], left, y)
+    y = jnp.where(x > xp[-1], right, y)
+
+    return y
+
+
 def init_polar(dir: str | None):
     assert dir is not None
     cd_arrays = []
@@ -85,7 +121,7 @@ def cd0(polar_data: PolarData, re):
 def cd(polar_data: PolarData, re, alpha_deg):
     re = re_index(polar_data, re)
     left_right_val = (1 - jnp.cos(jnp.deg2rad(alpha_deg) * 2)) * 0.6
-    return jnp.interp(
+    return fast_interp(
         alpha_deg,
         polar_data.alphas_by_re[re],
         polar_data.cd_by_re[re],
@@ -94,11 +130,12 @@ def cd(polar_data: PolarData, re, alpha_deg):
     )
 
 
+
 def cl(polar_data: PolarData, re, alpha_deg):
     re = re_index(polar_data, re)
     left_right_val = jnp.sin(jnp.deg2rad(alpha_deg) * 2)
 
-    return jnp.interp(
+    return fast_interp(
         alpha_deg,
         polar_data.alphas_by_re[re],
         polar_data.cl_by_re[re],

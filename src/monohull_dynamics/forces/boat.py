@@ -1,5 +1,5 @@
 import typing
-
+import jax
 import jax.numpy as jnp
 
 from monohull_dynamics.forces.foils import FoilData, foil_frame_resultant
@@ -98,7 +98,7 @@ def init_boat(
         hull_coeffs=get_hull_coeffs(),
     )
 
-
+@jax.jit
 def forces_and_moments(
     boat_data: BoatData,
     boat_velocity: jnp.ndarray,
