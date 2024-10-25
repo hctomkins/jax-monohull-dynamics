@@ -70,14 +70,14 @@ def animate_wind_grid():
         local_gust_theta_deg_offset_std=jnp.array(5.0),
         local_gust_radius_mean=jnp.array(10.0),
         local_gust_radius_std=jnp.array(5),
-        gust_lims=jnp.array([-R_m, R_m, -R_m, R_m])
+        bbox_lims=jnp.array([-R_m, R_m, -R_m, R_m])
     )
 
     # Initialize wind state
     rng = jax.random.PRNGKey(0)
     gust_rng = jax.random.split(rng, N_LOCAL_GUSTS)
     # spawn first gust centers uniformly in the box
-    xmin, xmax, ymin, ymax = params.gust_lims
+    xmin, xmax, ymin, ymax = params.bbox_lims
     initial_gust_centers = jax.random.uniform(rng, shape=(N_LOCAL_GUSTS, 2), minval=0.0, maxval=1.0)
     initial_gust_centers = initial_gust_centers * jnp.array([xmax - xmin, ymax - ymin]) + jnp.array([xmin, ymin])
 
