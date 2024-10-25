@@ -55,7 +55,7 @@ spawn_many = jax.vmap(wind_spawn, in_axes=(None, None, 0))
 
 def default_params(bbox_lims: jnp.ndarray) -> WindParams:
     return WindParams(
-        base_theta_deg=jnp.array(90.0),
+        base_theta_deg=jnp.array(-90.0),
         base_r=jnp.array(5.0),  # 10 knots
         theta_oscillation_amplitude_deg=jnp.array(10.0),
         theta_oscillation_period_s=jnp.array(180.0),
@@ -195,5 +195,5 @@ def evaluate_wind(wind_state: WindState, pos: jnp.ndarray) -> jnp.ndarray:
     )  # [N_LOCAL_GUSTS, 2]
     return base_wind + jnp.sum(gusts_effect, axis=0)
 
-
-evaluate_wind_grid = jax.jit(jax.vmap(jax.vmap(evaluate_wind, in_axes=(None, 0)), in_axes=(None, 0)))
+evaluate_wind_points = jax.vmap(evaluate_wind, in_axes=(None, 0))
+evaluate_wind_grid = jax.jit(jax.vmap(evaluate_wind_points, in_axes=(None, 0)))

@@ -52,3 +52,5 @@ def integrate(
         theta=new_theta,
         thetadot=new_thetadot,
     )
+
+integrate_multiple = jax.vmap(integrate, in_axes=(0, 0, 0, None))

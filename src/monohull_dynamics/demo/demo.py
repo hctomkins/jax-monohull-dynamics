@@ -3,10 +3,13 @@ from dataclasses import dataclass
 import time
 
 import jax.numpy as jnp
+import jax
 import pyglet
 
-from monohull_dynamics.dynamics.boat import j_integrate_many
+from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
 from monohull_dynamics.dynamics.particle import BoatState, ParticleState
+from monohull_dynamics.dynamics.wind import default_params, default_state, WindParams, WindState, evaluate_wind_points, \
+    evaluate_wind
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
     BoatData,
@@ -29,18 +32,20 @@ def center_image(image):
 class SimulationState(typing.NamedTuple):
     force_model: BoatData
     boat_state: BoatState
-    wind_velocity: jnp.ndarray
+    wind_params: WindParams
+    wind_state: WindState
 
 
 @dataclass
 class MutableSimulationState:
     state: SimulationState
+    rng: jnp.ndarray
 
 
-def init_simulation_state():
-    return SimulationState(
-        force_model=init_firefly(),
-        boat_state=BoatState(
+def init_simulation_state(rng):
+    wind_params = default_params(bbox_lims=jnp.array([-100, 100, -100, 100]))
+    wind_state = default_state(wind_params, rng)
+    boat_state = BoatState(
             particle_state=ParticleState(
                 m=jnp.array(100.0),
                 I=jnp.array(100.0),
@@ -49,17 +54,41 @@ def init_simulation_state():
                 theta=jnp.array(0.0),
                 thetadot=jnp.array(0.0),
             ),
-            rudder_angle=0.0,
-            sail_angle=0.0,
+            rudder_angle=jnp.array(0.0),
+            sail_angle=jnp.array(0.0),
             debug_data=DUMMY_DEBUG_DATA,
-        ),
-        wind_velocity=jnp.array([0.0, -4.0]),
+        )
+    # Extra dim for multiple boats - 1 boat for now
+    boat_state = jax.tree.map(lambda x: x[None], boat_state)
+    return SimulationState(
+        force_model=init_firefly(),
+        boat_state=boat_state,
+        wind_params=wind_params,
+        wind_state=wind_state
     )
 
 
 def world_to_canvas(position: jnp.ndarray) -> jnp.ndarray:
     return ((position / SCALE_M) + 0.5) * RESOLUTION
 
+# def plot_wind_arrows(wind_state):
+#     N = 5  # Define the grid size
+#     x = jnp.linspace(-SCALE_M/2, SCALE_M/2, N)
+#     y = jnp.linspace(-SCALE_M/2, SCALE_M/2, N)
+#     grid_x, grid_y = jnp.meshgrid(x, y)
+#     grid_points = jnp.stack([grid_x, grid_y], axis=-1)  # Shape [N, N, 2]
+#
+#     wind_strengths = evaluate_wind_grid(wind_state, grid_points)  # Shape [N, N, 2]
+#
+#     arrows = []
+#     for i in range(N):
+#         for j in range(N):
+#             start = world_to_canvas(grid_points[i, j])
+#             end = start + wind_strengths[i, j]*3
+#             arrow = pyglet.shapes.Line(start[0], start[1], end[0], end[1], width=2, color=(255, 255, 0))
+#             arrows.append(arrow)
+#
+#     return arrows
 
 def run_demo():
     pyglet.resource.path = ["."]
@@ -82,7 +111,8 @@ def run_demo():
     ego_sail = pyglet.shapes.Line(0, 0, -80 * sf, 0, width=2, color=(0, 255, 0))
     ego_sail.anchor_x = 0
     ego_sail.anchor_y = 0
-    global_state = MutableSimulationState(state=init_simulation_state())
+    rng = jax.random.PRNGKey(0)
+    global_state = MutableSimulationState(state=init_simulation_state(rng), rng=rng)
 
     # Debug data
     board_moment_widget = pyglet.shapes.Sector(x=30, y=RESOLUTION - 30, radius=20, angle=jnp.deg2rad(0), color=(255, 0, 0))
@@ -119,14 +149,26 @@ def run_demo():
         dt = min(0.1, dt)
         sim_state = global_state.state
         boat_state = sim_state.boat_state
+        rng = global_state.rng
 
         if keys[pyglet.window.key.SPACE]:
             return
 
-        boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)
-        sim_state = sim_state._replace(boat_state=boat_state)
+        # boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)
+        boat_state, wind_state, rng = step_wind_and_boats_with_interaction_multiple(
+            boats_state=boat_state,
+            force_model=sim_state.force_model,
+            wind_state=sim_state.wind_state,
+            wind_params=sim_state.wind_params,
+            inner_dt=dt / JAX_INNER_N,
+            rng=rng,
+            N=JAX_INNER_N,
+        )
+        sim_state = sim_state._replace(boat_state=boat_state, wind_state=wind_state)
         debug_data = sim_state.boat_state.debug_data
+        debug_data = jax.tree.map(lambda x: x[0], debug_data)
         global_state.state = sim_state
+        global_state.rng = rng
         board_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["board"] / 800)
         rudder_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["rudder"] / 800)
         sail_moment_widget.angle = jnp.deg2rad(360 * debug_data["moments"]["sail"] / 800)
@@ -146,30 +188,32 @@ def run_demo():
         window.clear()
         sim_state = global_state.state
         boat_state = sim_state.boat_state
-        particle_state = sim_state.boat_state.particle_state
+        # TODO: Right now we only have one boat, so mix displaying [1] and [] values
+        boat_state_0 = jax.tree.map(lambda x: x[0], boat_state)
+        particle_state = boat_state_0.particle_state
         boat_vector = jnp.array(
             [
                 jnp.cos(particle_state.theta),
                 jnp.sin(particle_state.theta),
             ]
         )
-        sail_sign = -jnp.sign(jnp.cross(boat_vector, sim_state.wind_velocity))
+        local_wind_velocity = evaluate_wind(sim_state.wind_state, particle_state.x) # [B, 2]
+        sail_sign = -jnp.sign(jnp.cross(boat_vector, local_wind_velocity))
 
         if keys[pyglet.window.key.LEFT]:
             new_rudder = boat_state.rudder_angle - jnp.deg2rad(2)
-            new_rudder = max(-jnp.pi / 4, new_rudder)
         elif keys[pyglet.window.key.RIGHT]:
             new_rudder = boat_state.rudder_angle + jnp.deg2rad(2)
-            new_rudder = min(jnp.pi / 4, new_rudder)
         else:
             new_rudder = boat_state.rudder_angle
+        new_rudder = jnp.clip(new_rudder, -jnp.pi / 4, jnp.pi / 4)
 
         if keys[pyglet.window.key.UP]:
-            new_sail = jnp.pi / 16 * sail_sign
+            new_sail = jnp.pi / 16 * sail_sign[None]
         elif keys[pyglet.window.key.DOWN]:
-            new_sail = jnp.pi / 2 * sail_sign
+            new_sail = jnp.pi / 2 * sail_sign[None]
         else:
-            new_sail = jnp.pi / 4 * sail_sign
+            new_sail = jnp.pi / 4 * sail_sign[None]
 
         new_boat_state = boat_state._replace(rudder_angle=new_rudder, sail_angle=new_sail)
         sim_state = sim_state._replace(boat_state=new_boat_state)
@@ -183,12 +227,12 @@ def run_demo():
         rudder_position = world_to_canvas(particle_state.x)
         ego_rudder.x = rudder_position[0]
         ego_rudder.y = rudder_position[1]
-        ego_rudder.rotation = -jnp.rad2deg(particle_state.theta + boat_state.rudder_angle)
+        ego_rudder.rotation = -jnp.rad2deg(particle_state.theta + boat_state_0.rudder_angle)
         ego_rudder.draw()
         sail_position = world_to_canvas(particle_state.x)
         ego_sail.x = sail_position[0]
         ego_sail.y = sail_position[1]
-        ego_sail.rotation = -jnp.rad2deg(particle_state.theta + boat_state.sail_angle)
+        ego_sail.rotation = -jnp.rad2deg(particle_state.theta + boat_state_0.sail_angle)
         ego_sail.draw()
 
         time_label.text = f"Time: {time.time() - start_time:.2f}"
@@ -207,5 +251,5 @@ def run_demo():
 
 
 if __name__ == "__main__":
-    # jax.disable_jit()
+    # with jax.disable_jit():
     run_demo()
