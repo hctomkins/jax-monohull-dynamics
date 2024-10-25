@@ -8,7 +8,7 @@ def demo_wind_spawn():
     from matplotlib import pyplot as plt
 
     rng = jax.random.split(jax.random.PRNGKey(30), 10)
-    spawn_many = jax.jit(jax.vmap(wind_spawn, in_axes=(None, None, None, None, 0, 0)))
+    spawn_many = jax.jit(jax.vmap(wind_spawn, in_axes=(None, 0, 0)))
 
 
     # Arrow length
@@ -17,10 +17,7 @@ def demo_wind_spawn():
     angle_radians = jnp.deg2rad(angle_degrees)
 
     spawn_points = spawn_many(
-        jnp.array(-15),
-        jnp.array(15),
-        jnp.array(-15),
-        jnp.array(15),
+        jnp.array([-15,15,-15,15]),
         jnp.ones(10) * angle_degrees,
         rng
     )  # [10, 2]
