@@ -192,6 +192,7 @@ def forces_and_moments(
     }
     return resultant_force, resultant_moment, debug_data
 
+forces_and_moments_many = jax.vmap(forces_and_moments, in_axes=(None, 0, 0, 0, 0, 0, 0))
 
 def init_firefly():
     return init_boat(
