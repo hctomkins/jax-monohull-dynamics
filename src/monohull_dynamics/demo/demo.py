@@ -8,7 +8,7 @@ import pyglet
 
 from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
 from monohull_dynamics.dynamics.particle import BoatState, ParticleState
-from monohull_dynamics.dynamics.wind import default_params, default_state, WindParams, WindState, evaluate_wind_points, \
+from monohull_dynamics.dynamics.wind import default_wind_params, default_wind_state, WindParams, WindState, evaluate_wind_points, \
     evaluate_wind
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
@@ -43,8 +43,8 @@ class MutableSimulationState:
 
 
 def init_simulation_state(rng):
-    wind_params = default_params(bbox_lims=jnp.array([-100, 100, -100, 100]))
-    wind_state = default_state(wind_params, rng)
+    wind_params = default_wind_params(bbox_lims=jnp.array([-100, 100, -100, 100]))
+    wind_state = default_wind_state(wind_params, rng)
     boat_state = BoatState(
             particle_state=ParticleState(
                 m=jnp.array(100.0),

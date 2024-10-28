@@ -39,7 +39,7 @@ def get_wind_effect(force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_the
     # if we can approximate delta t (time force acts on wind) from frontal area
     # then we can compute the change in wind velocity interpolated over the falloff cone
     acting_time = 3.0
-    acting_height = 3.0
+    acting_height = 6.0
     acting_length = sail_area / acting_height
     sail_vector = jnp.array([jnp.cos(sail_theta), jnp.sin(sail_theta)])
     wind_norm = base_wind / jnp.linalg.norm(base_wind)
@@ -64,8 +64,8 @@ def get_wind_effect(force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_the
     windwise_dmv = dmv * windwise_force_ratio
 
     # Average velocity change over cone
-    windwise_m = rho_air * wind_cone_area * acting_height
-    sailwise_m = rho_air * sail_cone_area * acting_height
+    windwise_m = rho_air * wind_cone_area * acting_height / 5 # Factor of 5 for non-uniform cone distribution
+    sailwise_m = rho_air * sail_cone_area * acting_height / 5 # Factor of 5 for non-uniform cone distribution
     windwise_dv = windwise_dmv / windwise_m
     sailwise_dv = sailwise_dmv / sailwise_m
 

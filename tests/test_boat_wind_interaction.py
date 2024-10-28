@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 
 
 def test_demo_plots():
-
     # Define the grid over a 15m x 15m box
     res = 50
     lim = 20
@@ -86,8 +85,3 @@ def test_demo_plots():
         ax_quiver.grid(True)
         # equal aspect
         ax_quiver.set_aspect("equal")
-
-
-if __name__ == '__main__':
-    test_demo_plots()
-    plt.show()

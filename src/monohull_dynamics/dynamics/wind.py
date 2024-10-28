@@ -53,7 +53,7 @@ def wind_spawn(bbox_lims: jnp.ndarray, base_theta_deg, rng):
 
 spawn_many = jax.vmap(wind_spawn, in_axes=(None, None, 0))
 
-def default_params(bbox_lims: jnp.ndarray) -> WindParams:
+def default_wind_params(bbox_lims: jnp.ndarray) -> WindParams:
     return WindParams(
         base_theta_deg=jnp.array(-90.0),
         base_r=jnp.array(5.0),  # 10 knots
@@ -68,10 +68,12 @@ def default_params(bbox_lims: jnp.ndarray) -> WindParams:
         bbox_lims=bbox_lims
     )
 
-def default_state(params: WindParams, rng) -> WindState:
+def default_wind_state(params: WindParams, rng) -> WindState:
     xmin, xmax, ymin, ymax = params.bbox_lims
+    gust_rngs = jax.random.split(rng, N_LOCAL_GUSTS)
     initial_gust_centers = jax.random.uniform(rng, shape=(N_LOCAL_GUSTS, 2), minval=0.0, maxval=1.0)
     initial_gust_centers = initial_gust_centers * jnp.array([xmax - xmin, ymax - ymin]) + jnp.array([xmin, ymin])
+    initial_gust_starts = spawn_many(params.bbox_lims, params.base_theta_deg, gust_rngs)
 
     return WindState(
         current_theta_phase=jax.random.uniform(rng) * 2 * jnp.pi,
@@ -80,15 +82,15 @@ def default_state(params: WindParams, rng) -> WindState:
         current_base_theta=params.base_theta_deg,
         local_gust_centers=initial_gust_centers,
         local_gust_strengths=jnp.maximum(
-            params.base_r + params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
-            params.local_gust_strength_offset_std
+        params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
+            0.0
         ),
         local_gust_theta_deg=params.base_theta_deg + jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)) * params.local_gust_theta_deg_offset_std,
         local_gust_effect_radius=jnp.maximum(
             params.local_gust_radius_mean + jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)) * params.local_gust_radius_std,
             params.local_gust_radius_std
         ),
-        local_gust_start_points=initial_gust_centers
+        local_gust_start_points=initial_gust_starts
     )
 
 

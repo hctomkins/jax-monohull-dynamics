@@ -1,6 +1,6 @@
 from monohull_dynamics.dynamics.boat_wind_interaction import we_grid
 from monohull_dynamics.dynamics.wind import wind_spawn, WindParams, N_LOCAL_GUSTS, WindState, step_wind_state, \
-    evaluate_wind_grid, evaluate_wind
+    evaluate_wind_grid, evaluate_wind, default_wind_state
 import jax.numpy as jnp
 import jax
 
@@ -59,7 +59,7 @@ def animate_wind_grid():
     import cv2
     import numpy as np
     # Initialize wind parameters
-    R_m = 150
+    R_m = 15
     params = WindParams(
         base_theta_deg=jnp.array(-90),
         base_r=jnp.array(5.0),  # 10 knots
@@ -77,28 +77,11 @@ def animate_wind_grid():
     # Initialize wind state
     rng = jax.random.PRNGKey(0)
     # spawn first gust centers uniformly in the box
-    xmin, xmax, ymin, ymax = params.bbox_lims
-    initial_gust_centers = jax.random.uniform(rng, shape=(N_LOCAL_GUSTS, 2), minval=0.0, maxval=1.0)
-    initial_gust_centers = initial_gust_centers * jnp.array([xmax - xmin, ymax - ymin]) + jnp.array([xmin, ymin])
-
-    initial_state = WindState(
-        current_theta_phase=jnp.array(0.0),
-        current_r_phase=jnp.array(0.0),
-        current_base_r=params.base_r,
-        current_base_theta=params.base_theta_deg,
-        local_gust_centers=initial_gust_centers,
-        local_gust_strengths=jax.random.normal(rng, shape=(
-        N_LOCAL_GUSTS,)) * params.local_gust_strength_offset_std,
-        local_gust_theta_deg=params.base_theta_deg + jax.random.normal(rng, shape=(
-        N_LOCAL_GUSTS,)) * params.local_gust_theta_deg_offset_std,
-        local_gust_effect_radius=jnp.maximum(params.local_gust_radius_mean + jax.random.normal(rng, shape=(
-            N_LOCAL_GUSTS,)) * params.local_gust_radius_std, params.local_gust_radius_std),
-        local_gust_start_points=initial_gust_centers
-    )
+    initial_state = default_wind_state(params, rng)
     XRES = 1000
     YRES = 1000
-    XNUM = 8
-    YNUM = 8
+    XNUM = 20
+    YNUM = 20
 
     # Create a grid of sample points
     x = jnp.linspace(-R_m, R_m, XNUM)
@@ -107,15 +90,15 @@ def animate_wind_grid():
     grid_points = jnp.stack([xx, yy], axis=-1)
 
     # Initialize OpenCV window
-    cv2.namedWindow('Wind Field', cv2.WINDOW_NORMAL)
+    cv2.namedWindow('Wind Field', cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_AUTOSIZE)
 
     # Animation loop
     firefly = init_firefly()
     state = initial_state
-    dt = jnp.array(1)
+    dt = jnp.array(0.1)
     for _ in range(1000):
         # Step the wind state
-        for i in range(1):
+        for i in range(10):
             state, rng = step_wind_state(state, rng, dt, params)
 
         # Evaluate wind at grid points
@@ -162,6 +145,10 @@ def animate_wind_grid():
                 )
                 # print(wind_vectors[i, j, 1])
                 cv2.arrowedLine(img, start_point, end_point, (0, 255, 0), 1, tipLength=0.1)
+                wind_strength = jnp.linalg.norm(wind_vectors[i, j])
+                text_position = (end_point[0] + 5, end_point[1] - 5)
+                cv2.putText(img, f'{wind_strength:.2f}', text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1)
+
 
         # Cross and circle at gust center and radius:
         for i in range(N_LOCAL_GUSTS):
