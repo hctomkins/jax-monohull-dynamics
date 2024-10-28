@@ -105,12 +105,12 @@ def step_wind_state(state: WindState, rng: jnp.ndarray, dt: jnp.ndarray, params:
     new_base_r = params.base_r + params.r_oscillation_amplitude * jnp.sin(new_r_phase)
 
     # Step 2: Update the local gust positions
-    gust_dx = state.local_gust_strengths * jnp.cos(jnp.radians(state.local_gust_theta_deg)) * dt
-    gust_dy = state.local_gust_strengths * jnp.sin(jnp.radians(state.local_gust_theta_deg)) * dt
+    base_strength = new_base_r * jnp.array([jnp.cos(jnp.radians(new_base_theta_deg)), jnp.sin(jnp.radians(new_base_theta_deg))])
+    gust_dx = (base_strength[None, 0] + state.local_gust_strengths * jnp.cos(jnp.radians(state.local_gust_theta_deg))) * dt
+    gust_dy = (base_strength[None, 1] + state.local_gust_strengths * jnp.sin(jnp.radians(state.local_gust_theta_deg))) * dt
 
     # Update gust positions
     new_gust_centers = state.local_gust_centers + jnp.stack([gust_dx, gust_dy], axis=-1)
-    old_centers = state.local_gust_centers
 
     # Step 3: Respawn gusts whose centers were inside the box, and are now outside the box
     distance_traveled = jnp.linalg.norm(new_gust_centers - state.local_gust_start_points, axis=1)
@@ -122,8 +122,8 @@ def step_wind_state(state: WindState, rng: jnp.ndarray, dt: jnp.ndarray, params:
     spawned_gust_centers = spawn_many(params.bbox_lims, new_base_theta_deg, gust_rngs)  # [N_LOCAL_GUSTS, 2]
     spawned_gust_theta_deg = new_base_theta_deg + params.local_gust_theta_deg_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,))
     spawned_gust_strengths = jnp.maximum(
-        new_base_r + params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
-        params.local_gust_strength_offset_std
+        params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
+        0.0
     )
     spawned_gust_radii = jnp.maximum(
         params.local_gust_radius_mean + params.local_gust_radius_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
