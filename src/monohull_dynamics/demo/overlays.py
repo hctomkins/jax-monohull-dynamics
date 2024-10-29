@@ -1,10 +1,12 @@
-import pyglet
 import jax.numpy as jnp
+import pyglet
+
 
 def center_image(image):
     """Sets an image's anchor point to its center"""
     image.anchor_x = image.width // 2
     image.anchor_y = image.height // 2
+
 
 def world_to_canvas(position: jnp.ndarray, scale, resolution) -> jnp.ndarray:
     return ((position / scale) + 0.5) * resolution
@@ -31,7 +33,6 @@ class BoatOne:
         self.ego_sail.anchor_x = 0
         self.ego_sail.anchor_y = 0
 
-
     def update_data(self, x, theta, sail_angle, rudder_angle):
         sprite_position = world_to_canvas(x, self.scale, self.resolution)
         self.ego_sprite.x = sprite_position[0]
@@ -57,36 +58,19 @@ class BoatDemoOverlays:
     def __init__(self, resolution):
         self.draw_batch = pyglet.graphics.Batch()
 
-        self.board_moment_widget = pyglet.shapes.Sector(x=30, y=resolution - 30, radius=20, angle=0,
-                                                       color=(255, 0, 0), batch=self.draw_batch)
-        self.rudder_moment_widget = pyglet.shapes.Sector(x=100, y=resolution - 30, radius=20, angle=0,
-                                                    color=(0, 0, 255), batch=self.draw_batch)
-        self.sail_moment_widget = pyglet.shapes.Sector(x=170, y=resolution - 30, radius=20, angle=0,
-                                                  color=(0, 255, 0), batch=self.draw_batch)
+        self.board_moment_widget = pyglet.shapes.Sector(x=30, y=resolution - 30, radius=20, angle=0, color=(255, 0, 0), batch=self.draw_batch)
+        self.rudder_moment_widget = pyglet.shapes.Sector(x=100, y=resolution - 30, radius=20, angle=0, color=(0, 0, 255), batch=self.draw_batch)
+        self.sail_moment_widget = pyglet.shapes.Sector(x=170, y=resolution - 30, radius=20, angle=0, color=(0, 255, 0), batch=self.draw_batch)
 
         self.board_force_widget = pyglet.shapes.Line(30, resolution - 100, 0, 0, width=2, color=(255, 0, 0), batch=self.draw_batch)
         self.rudder_force_widget = pyglet.shapes.Line(100, resolution - 100, 0, 0, width=2, color=(0, 0, 255), batch=self.draw_batch)
         self.sail_force_widget = pyglet.shapes.Line(170, resolution - 100, 0, 0, width=2, color=(0, 255, 0), batch=self.draw_batch)
-        self.wind_widget = pyglet.shapes.Line(170+70, resolution - 100, 0, 0, width=2, color=(255, 255, 0), batch=self.draw_batch)
+        self.wind_widget = pyglet.shapes.Line(170 + 70, resolution - 100, 0, 0, width=2, color=(255, 255, 0), batch=self.draw_batch)
         self.time_label = pyglet.text.Label(
-            "Time: 0",
-            font_name="Times New Roman",
-            font_size=12,
-            x=10,
-            y=10,
-            anchor_x="left",
-            anchor_y="bottom",
-            batch=self.draw_batch
+            "Time: 0", font_name="Times New Roman", font_size=12, x=10, y=10, anchor_x="left", anchor_y="bottom", batch=self.draw_batch
         )
         self.position_label = pyglet.text.Label(
-            "Position: 0",
-            font_name="Times New Roman",
-            font_size=12,
-            x=10,
-            y=30,
-            anchor_x="left",
-            anchor_y="bottom",
-            batch=self.draw_batch
+            "Position: 0", font_name="Times New Roman", font_size=12, x=10, y=30, anchor_x="left", anchor_y="bottom", batch=self.draw_batch
         )
 
     def update_data(self, debug_data: dict, position: jnp.ndarray, wind_velocity: jnp.ndarray, runtime: float):
@@ -107,10 +91,8 @@ class BoatDemoOverlays:
         self.time_label.text = f"Time: {runtime:.2f}"
         self.position_label.text = f"Position: {position[0]:.2f}, {position[1]:.2f}"
 
-
     def draw(self):
         self.draw_batch.draw()
-
 
 
 # def plot_wind_arrows(wind_state):

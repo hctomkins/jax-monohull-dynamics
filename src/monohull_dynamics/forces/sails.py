@@ -2,7 +2,7 @@ import typing
 
 import jax.numpy as jnp
 
-from monohull_dynamics.forces.polars.polar import rho_air, fast_interp
+from monohull_dynamics.forces.polars.polar import fast_interp, rho_air
 
 REVERSAL_FACTOR = -0.3
 FINN_CL_CD = {
@@ -28,10 +28,7 @@ FINN_CL_CD = {
 }
 
 # Flow reversal regime up to 180 - hack for now - mirror cd, and mirror cl with a reversal factor
-FINN_CL_CD = {
-    **FINN_CL_CD,
-    **{180 - k: (v[0] * REVERSAL_FACTOR, v[1]) for k, v in list(FINN_CL_CD.items())[::-1] if k != 90}
-}
+FINN_CL_CD = {**FINN_CL_CD, **{180 - k: (v[0] * REVERSAL_FACTOR, v[1]) for k, v in list(FINN_CL_CD.items())[::-1] if k != 90}}
 
 
 FINN_ALPHAS = list(FINN_CL_CD.keys())

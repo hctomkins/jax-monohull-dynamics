@@ -42,7 +42,7 @@ def fast_interp(x, xp, fp, left=None, right=None):
     fp = jnp.asarray(fp)
 
     # Use searchsorted with method='compare_all'
-    indices = jnp.searchsorted(xp, x, side='left', method='compare_all')
+    indices = jnp.searchsorted(xp, x, side="left", method="compare_all")
 
     # Adjust indices to get the index of the left point
     indices = jnp.clip(indices - 1, 0, len(xp) - 2)
@@ -128,7 +128,6 @@ def cd(polar_data: PolarData, re, alpha_deg):
         left=left_right_val,
         right=left_right_val,
     )
-
 
 
 def cl(polar_data: PolarData, re, alpha_deg):

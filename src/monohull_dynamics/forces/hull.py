@@ -2,7 +2,7 @@ import typing
 
 import jax.numpy as jnp
 
-from monohull_dynamics.forces.polars.polar import rho_water, fast_interp
+from monohull_dynamics.forces.polars.polar import fast_interp, rho_water
 
 # import matplotlib
 # from scipy.optimize import curve_fit
@@ -12,7 +12,7 @@ from monohull_dynamics.forces.polars.polar import rho_water, fast_interp
 # import matplotlib.pyplot as plt
 
 coeffs = {
-    "Fn": [
+    "froude": [
         0.15,
         0.20,
         0.25,
@@ -150,40 +150,41 @@ coeffs = {
 }
 # 0.00006 for all, 0.00007 for scan unroll, vs 0.0005 for interp
 
+
 def get_hull_coeffs():
     return {k: jnp.array(v) for k, v in coeffs.items()}
 
 
-def a0(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a0"], left=coeffs["a0"][0], right=coeffs["a0"][-1])
+def a0(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a0"], left=coeffs["a0"][0], right=coeffs["a0"][-1])
 
 
-def a1(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a1"], left=coeffs["a1"][0], right=coeffs["a1"][-1])
+def a1(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a1"], left=coeffs["a1"][0], right=coeffs["a1"][-1])
 
 
-def a2(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a2"], left=coeffs["a2"][0], right=coeffs["a2"][-1])
+def a2(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a2"], left=coeffs["a2"][0], right=coeffs["a2"][-1])
 
 
-def a3(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a3"], left=coeffs["a3"][0], right=coeffs["a3"][-1])
+def a3(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a3"], left=coeffs["a3"][0], right=coeffs["a3"][-1])
 
 
-def a4(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a4"], left=coeffs["a4"][0], right=coeffs["a4"][-1])
+def a4(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a4"], left=coeffs["a4"][0], right=coeffs["a4"][-1])
 
 
-def a5(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a5"], left=coeffs["a5"][0], right=coeffs["a5"][-1])
+def a5(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a5"], left=coeffs["a5"][0], right=coeffs["a5"][-1])
 
 
-def a6(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a6"], left=coeffs["a6"][0], right=coeffs["a6"][-1])
+def a6(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a6"], left=coeffs["a6"][0], right=coeffs["a6"][-1])
 
 
-def a7(coeffs: dict[str, jnp.ndarray], Fn: jnp.ndarray):
-    return fast_interp(Fn, coeffs["Fn"], coeffs["a7"], left=coeffs["a7"][0], right=coeffs["a7"][-1])
+def a7(coeffs: dict[str, jnp.ndarray], froude: jnp.ndarray):
+    return fast_interp(froude, coeffs["froude"], coeffs["a7"], left=coeffs["a7"][0], right=coeffs["a7"][-1])
 
 
 class HullData(typing.NamedTuple):
