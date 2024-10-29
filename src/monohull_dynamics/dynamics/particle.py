@@ -12,11 +12,6 @@ class ParticleState(typing.NamedTuple):
     theta: jnp.ndarray
     thetadot: jnp.ndarray
 
-class BoatState(typing.NamedTuple):
-    particle_state: ParticleState
-    rudder_angle: jnp.ndarray
-    sail_angle: jnp.ndarray
-    debug_data: dict
 
 @jax.jit
 def integrate(

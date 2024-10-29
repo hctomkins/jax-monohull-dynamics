@@ -1,7 +1,8 @@
 import jax
 import jax.numpy as jnp
 
-from monohull_dynamics.dynamics.particle import BoatState, integrate_multiple
+from monohull_dynamics.dynamics.particle import integrate_multiple
+from monohull_dynamics.dynamics.boat import BoatState
 from monohull_dynamics.dynamics.wind import WindState, WindParams, step_wind_state, evaluate_wind_points
 from monohull_dynamics.forces.boat import BoatData, forces_and_moments_many
 from monohull_dynamics.forces.polars.polar import rho_air
@@ -27,7 +28,7 @@ def cone_effect(cone_u: jnp.ndarray, base_width: jnp.ndarray, end_width: jnp.nda
     return factor
 
 @jax.jit
-def get_wind_effect(force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_theta: jnp.ndarray, base_wind:jnp.ndarray, at: jnp.ndarray) -> jnp.ndarray:
+def get_sail_wind_interaction(force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_theta: jnp.ndarray, base_wind:jnp.ndarray, at: jnp.ndarray, min_threshold: float = 0.1) -> jnp.ndarray:
     """
     Compute the effect of the boat on the wind at a position relative to the boat. This is an additive residual
     force_on_sail: [2]
@@ -50,7 +51,7 @@ def get_wind_effect(force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_the
     # Split dmv into wind and sail aligned cones - TODO: link to boat data
     sail_cone_base_width = 1.0
     sail_cone_end_width = 8.0
-    sail_cone_length = 20.0
+    sail_cone_length = 40
     sail_cone_area = (sail_cone_base_width + sail_cone_end_width) / 2 * sail_cone_length
 
     # Acting cone
@@ -87,23 +88,37 @@ def get_wind_effect(force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_the
         length=sail_cone_length,
         at=at
     )
+
+    # clip to min threshold radius
+    windwise_factor = jnp.where(jnp.linalg.norm(at) < min_threshold, 0.0, windwise_factor)
+    sailwise_factor = jnp.where(jnp.linalg.norm(at) < min_threshold, 0.0, sailwise_factor)
+
     wind_dv = windwise_dv * windwise_factor
     sail_dv = sailwise_dv * sailwise_factor
 
     return wind_dv + sail_dv, sailwise_factor + windwise_factor # [2], []
 
-we_grid = jax.vmap(get_wind_effect, in_axes=(None, None, None, None, 0))
+def apply_sail_wind_interaction(base, offset):
+    # CBA to vmap vmap, so apply to axis -1
+    prev_norm = jnp.linalg.norm(base, axis=-1, keepdims=True)
+    new_wind = base + offset
+    new_norm = jnp.linalg.norm(new_wind, axis=-1, keepdims=True)
+    new_norm_capped = jnp.minimum(prev_norm, new_norm)
+    return new_wind * (new_norm_capped / new_norm)
+
+we_grid = jax.vmap(get_sail_wind_interaction, in_axes=(None, None, None, None, 0))
 we_grid = jax.vmap(we_grid, in_axes=(None, None, None, None, 0))
 
-wind_effect_b = jax.vmap(get_wind_effect, in_axes=(0, None, 0, 0, None)) # [B boats, at a single position], return [B, 2]
-wind_effect_b_at_b = jax.vmap(wind_effect_b, in_axes=(None, None, None,None, 0)) # [B boats, at a grid of positions], return [B, G, 2]
+sail_wind_interaction_b = jax.vmap(get_sail_wind_interaction, in_axes=(0, None, 0, 0, 0)) # [B boats, at a list of offsets relevant to each boat ("single position")], return [B, 2]
+sail_wind_interaction_b_at_b = jax.vmap(sail_wind_interaction_b, in_axes=(0, None, 0, 0, 0)) # [BxB effector boats, at a grid of BxB affected offsets] (we're doing an extra broadcast than needed here but it's simpler)
 
-
+@jax.jit
 def step_wind_and_boats_with_interaction(boats_state: BoatState, force_model: BoatData, wind_state: WindState, wind_params: WindParams, inner_dt: jnp.ndarray, rng: jnp.ndarray) -> tuple[BoatState, WindState, jnp.ndarray]:
     rng, _ = jax.random.split(rng)
     particles = boats_state.particle_state
     wind_state, rng = step_wind_state(wind_state, rng, inner_dt, wind_params)
     wind_velocities = evaluate_wind_points(wind_state, particles.x) # [B, 2]
+    B = particles.x.shape[0]
 
     for i in range(1):
         f, m, dd = forces_and_moments_many(
@@ -114,16 +129,20 @@ def step_wind_and_boats_with_interaction(boats_state: BoatState, force_model: Bo
             particles.thetadot,
             boats_state.sail_angle,
             boats_state.rudder_angle,
-        ) # [B]
-        wind_offsets, _ = wind_effect_b_at_b(
-            f,
+        ) # [B, 2]
+
+        # for [B,B] - effector per column, affected per row
+        # I.E. from row i to column j / boat i's offset from boat j - fits with vmap strategy
+        b_at_b_position_offsets = particles.x[:, None, :] - particles.x[None, :, :] # [B, B, 2]
+        wind_offsets, _ = sail_wind_interaction_b_at_b(
+            jax.lax.broadcast(f, (B,)),
             force_model.sail_area,
-            boats_state.sail_angle,
-            wind_velocities,
-            particles.x
+            jax.lax.broadcast(boats_state.sail_angle, (B,)),
+            jax.lax.broadcast(wind_velocities, (B,)),
+            b_at_b_position_offsets
         ) # [B, B, 2]
-        wind_offsets = jnp.sum(wind_offsets, axis=0) # [B, 2]
-        wind_velocities = wind_velocities + wind_offsets
+        wind_offsets = jnp.sum(wind_offsets, axis=1)
+        wind_velocities = apply_sail_wind_interaction(wind_velocities,wind_offsets)
 
     f, m, dd = forces_and_moments_many(
         force_model,
@@ -136,13 +155,13 @@ def step_wind_and_boats_with_interaction(boats_state: BoatState, force_model: Bo
     )  # [B]
 
     boats_state = boats_state._replace(particle_state=integrate_multiple(particles, f, m, inner_dt), debug_data=dd)
-    return boats_state, wind_state, rng
+    return boats_state, wind_state, rng, wind_offsets
 
 @jax.jit
 def step_wind_and_boats_with_interaction_multiple(boats_state: BoatState, force_model: BoatData, wind_state: WindState, wind_params: WindParams, inner_dt: jnp.ndarray, rng: jnp.ndarray, N: int) -> BoatState:
-    init_rolled_state = (boats_state, wind_state, rng)
+    init_rolled_state = (boats_state, wind_state, rng, jnp.array([[0.0, 0.0]]))
     def body_fn(i, rolled_state):
-        _boats_state, _wind_state, _rng = rolled_state
+        _boats_state, _wind_state, _rng, _offsets = rolled_state
         return step_wind_and_boats_with_interaction(_boats_state, force_model, _wind_state, wind_params, inner_dt, _rng)
     retuple = jax.lax.fori_loop(0, N, body_fn, init_rolled_state)
     return retuple
