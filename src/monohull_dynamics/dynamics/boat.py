@@ -2,9 +2,8 @@ import typing
 
 import jax
 import jax.numpy as jnp
-from jax import numpy as jnp
 
-from monohull_dynamics.dynamics.particle import integrate, ParticleState
+from monohull_dynamics.dynamics.particle import ParticleState, integrate
 from monohull_dynamics.forces.boat import (
     BoatData,
     forces_and_moments,
@@ -35,16 +34,18 @@ def step_uncontrolled(boat_state: BoatState, force_model: BoatData, wind_velocit
     return new_boat_state
 
 
-def integrate_many(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, N) -> BoatState:
-    body_fn = lambda i, rolled_state: step_uncontrolled(rolled_state, force_model, wind_velocity, inner_dt)
-    return jax.lax.fori_loop(0, N, body_fn, boat_state)
+def integrate_many(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, n) -> BoatState:
+    def body_fn(i, rolled_state):
+        return step_uncontrolled(rolled_state, force_model, wind_velocity, inner_dt)
+
+    return jax.lax.fori_loop(0, n, body_fn, boat_state)
 
 
 j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(3,))
 j_integrate_many = jax.jit(integrate_many, static_argnums=(4))
 
 
-def integrate_many_debug(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, N) -> BoatState:
-    for i in range(N):
+def integrate_many_debug(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, n) -> BoatState:
+    for i in range(n):
         boat_state = step_uncontrolled(boat_state, force_model, wind_velocity, inner_dt)
     return boat_state

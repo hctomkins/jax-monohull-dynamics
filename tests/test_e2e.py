@@ -1,11 +1,12 @@
 from monohull_dynamics.demo.demo import (
     init_simulation_state,
 )
-from monohull_dynamics.dynamics.boat import j_integrate_many, j_step_uncontrolled, integrate_many, step_uncontrolled
+from monohull_dynamics.dynamics.boat import j_integrate_many, j_step_uncontrolled, step_uncontrolled
 import jax.numpy as jnp
 from jax import jit
 import time
 import jax.profiler
+
 
 def test_e2e():
     sim_state = init_simulation_state()

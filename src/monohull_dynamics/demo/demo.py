@@ -1,24 +1,22 @@
+import pickle
+import time
 import typing
 from dataclasses import dataclass
-import time
-from datetime import datetime
 
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
 import pyglet
 
 from monohull_dynamics.demo.overlays import BoatDemoOverlays, BoatOne
+from monohull_dynamics.dynamics.boat import BoatState
 from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
 from monohull_dynamics.dynamics.particle import ParticleState
-from monohull_dynamics.dynamics.boat import BoatState
-from monohull_dynamics.dynamics.wind import default_wind_params, default_wind_state, WindParams, WindState, evaluate_wind_points, \
-    evaluate_wind
+from monohull_dynamics.dynamics.wind import WindParams, WindState, default_wind_params, default_wind_state, evaluate_wind
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
     BoatData,
     init_firefly,
 )
-import pickle
 
 RESOLUTION = 800
 SCALE_M = 30
@@ -46,26 +44,21 @@ def init_simulation_state(rng):
     wind_params = default_wind_params(bbox_lims=jnp.array([-100, 100, -100, 100]))
     wind_state = default_wind_state(wind_params, rng)
     boat_state = BoatState(
-            particle_state=ParticleState(
-                m=jnp.array(100.0),
-                I=jnp.array(100.0),
-                x=jnp.array([0.0, 0.0]),
-                xdot=jnp.array([0.0, 0.0]),
-                theta=jnp.array(0.0),
-                thetadot=jnp.array(0.0),
-            ),
-            rudder_angle=jnp.array(0.0),
-            sail_angle=jnp.array(0.0),
-            debug_data=DUMMY_DEBUG_DATA,
-        )
+        particle_state=ParticleState(
+            m=jnp.array(100.0),
+            I=jnp.array(100.0),
+            x=jnp.array([0.0, 0.0]),
+            xdot=jnp.array([0.0, 0.0]),
+            theta=jnp.array(0.0),
+            thetadot=jnp.array(0.0),
+        ),
+        rudder_angle=jnp.array(0.0),
+        sail_angle=jnp.array(0.0),
+        debug_data=DUMMY_DEBUG_DATA,
+    )
     # Extra dim for multiple boats - 1 boat for now
     boat_state = jax.tree.map(lambda x: x[None], boat_state)
-    return SimulationState(
-        force_model=init_firefly(),
-        boat_state=boat_state,
-        wind_params=wind_params,
-        wind_state=wind_state
-    )
+    return SimulationState(force_model=init_firefly(), boat_state=boat_state, wind_params=wind_params, wind_state=wind_state)
 
 
 def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, overlays: BoatDemoOverlays, boat_sprite: BoatOne):
@@ -122,7 +115,7 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
         wind_params=sim_state.wind_params,
         inner_dt=physics_dt / JAX_INNER_N,
         rng=rng,
-        N=JAX_INNER_N,
+        n=JAX_INNER_N,
     )
     # boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)
 
@@ -130,6 +123,7 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
     new_sim_state = sim_state._replace(boat_state=new_boat_state, wind_state=new_wind_state)
 
     return new_sim_state, rng
+
 
 def run_demo():
     pyglet.resource.path = ["."]
@@ -147,12 +141,10 @@ def run_demo():
 
     # Time and position text
     def step_physics(dt):
-
         if keys[pyglet.window.key.SPACE]:
             return
 
         global_state.state, global_state.rng = sim_step(dt, global_state, keys, overlays, boat_sprite)
-
 
     pyglet.clock.schedule_interval(step_physics, PYTHON_DT)
 
@@ -163,8 +155,7 @@ def run_demo():
 
         # Overlays
         wind_strength = evaluate_wind(global_state.state.wind_state, global_state.state.boat_state.particle_state.x[0])
-        overlays.update_data(debug_data, global_state.state.boat_state.particle_state.x[0], wind_strength,
-                             time.time() - global_state.start_time)
+        overlays.update_data(debug_data, global_state.state.boat_state.particle_state.x[0], wind_strength, time.time() - global_state.start_time)
         boat_sprite.update_data(
             x=global_state.state.boat_state.particle_state.x[0],
             theta=global_state.state.boat_state.particle_state.theta[0],

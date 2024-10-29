@@ -53,6 +53,7 @@ def wind_spawn(bbox_lims: jnp.ndarray, base_theta_deg, rng):
 
 spawn_many = jax.vmap(wind_spawn, in_axes=(None, None, 0))
 
+
 def default_wind_params(bbox_lims: jnp.ndarray) -> WindParams:
     return WindParams(
         base_theta_deg=jnp.array(-90.0),
@@ -60,13 +61,14 @@ def default_wind_params(bbox_lims: jnp.ndarray) -> WindParams:
         theta_oscillation_amplitude_deg=jnp.array(10.0),
         theta_oscillation_period_s=jnp.array(180.0),
         r_oscillation_amplitude=jnp.array(1.0),
-        r_oscillation_period_s=jnp.array(60.0*5),
+        r_oscillation_period_s=jnp.array(60.0 * 5),
         local_gust_strength_offset_std=jnp.array(0.5),
         local_gust_theta_deg_offset_std=jnp.array(3.0),
         local_gust_radius_mean=jnp.array(10.0),
         local_gust_radius_std=jnp.array(5),
-        bbox_lims=bbox_lims
+        bbox_lims=bbox_lims,
     )
+
 
 def default_wind_state(params: WindParams, rng) -> WindState:
     xmin, xmax, ymin, ymax = params.bbox_lims
@@ -81,16 +83,13 @@ def default_wind_state(params: WindParams, rng) -> WindState:
         current_base_r=params.base_r,
         current_base_theta=params.base_theta_deg,
         local_gust_centers=initial_gust_centers,
-        local_gust_strengths=jnp.maximum(
-        params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
-            0.0
-        ),
+        local_gust_strengths=jnp.maximum(params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)), 0.0),
         local_gust_theta_deg=params.base_theta_deg + jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)) * params.local_gust_theta_deg_offset_std,
         local_gust_effect_radius=jnp.maximum(
             params.local_gust_radius_mean + jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)) * params.local_gust_radius_std,
-            params.local_gust_radius_std
+            params.local_gust_radius_std,
         ),
-        local_gust_start_points=initial_gust_starts
+        local_gust_start_points=initial_gust_starts,
     )
 
 
@@ -123,13 +122,9 @@ def step_wind_state(state: WindState, rng: jnp.ndarray, dt: jnp.ndarray, params:
     gust_rngs = jax.random.split(rng, N_LOCAL_GUSTS)
     spawned_gust_centers = spawn_many(params.bbox_lims, new_base_theta_deg, gust_rngs)  # [N_LOCAL_GUSTS, 2]
     spawned_gust_theta_deg = new_base_theta_deg + params.local_gust_theta_deg_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,))
-    spawned_gust_strengths = jnp.maximum(
-        params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
-        0.0
-    )
+    spawned_gust_strengths = jnp.maximum(params.local_gust_strength_offset_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)), 0.0)
     spawned_gust_radii = jnp.maximum(
-        params.local_gust_radius_mean + params.local_gust_radius_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)),
-        params.local_gust_radius_std
+        params.local_gust_radius_mean + params.local_gust_radius_std * jax.random.normal(rng, shape=(N_LOCAL_GUSTS,)), params.local_gust_radius_std
     )
 
     new_gust_centers = jnp.where(respawn[:, None], spawned_gust_centers, new_gust_centers)
@@ -148,7 +143,7 @@ def step_wind_state(state: WindState, rng: jnp.ndarray, dt: jnp.ndarray, params:
         local_gust_strengths=new_gust_strengths,
         local_gust_theta_deg=new_gust_theta_deg,
         local_gust_effect_radius=new_gust_radius,
-        local_gust_start_points=new_start_points
+        local_gust_start_points=new_start_points,
     ), rng
 
 
@@ -196,6 +191,7 @@ def evaluate_wind(wind_state: WindState, pos: jnp.ndarray) -> jnp.ndarray:
         wind_state.local_gust_centers, wind_state.local_gust_strengths, wind_state.local_gust_theta_deg, wind_state.local_gust_effect_radius, pos
     )  # [N_LOCAL_GUSTS, 2]
     return base_wind + jnp.sum(gusts_effect, axis=0)
+
 
 evaluate_wind_points = jax.vmap(evaluate_wind, in_axes=(None, 0))
 evaluate_wind_grid = jax.jit(jax.vmap(evaluate_wind_points, in_axes=(None, 0)))
