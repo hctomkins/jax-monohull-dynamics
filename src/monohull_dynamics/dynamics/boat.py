@@ -1,11 +1,21 @@
+import typing
+
 import jax
 import jax.numpy as jnp
+from jax import numpy as jnp
 
-from monohull_dynamics.dynamics.particle import BoatState, integrate
+from monohull_dynamics.dynamics.particle import integrate, ParticleState
 from monohull_dynamics.forces.boat import (
     BoatData,
     forces_and_moments,
 )
+
+
+class BoatState(typing.NamedTuple):
+    particle_state: ParticleState
+    rudder_angle: jnp.ndarray
+    sail_angle: jnp.ndarray
+    debug_data: dict
 
 
 def step_uncontrolled(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt) -> BoatState:

@@ -1,6 +1,7 @@
 import typing
 from dataclasses import dataclass
 import time
+from datetime import datetime
 
 import jax.numpy as jnp
 import jax
@@ -8,7 +9,8 @@ import pyglet
 
 from monohull_dynamics.demo.overlays import BoatDemoOverlays, BoatOne
 from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
-from monohull_dynamics.dynamics.particle import BoatState, ParticleState
+from monohull_dynamics.dynamics.particle import ParticleState
+from monohull_dynamics.dynamics.boat import BoatState
 from monohull_dynamics.dynamics.wind import default_wind_params, default_wind_state, WindParams, WindState, evaluate_wind_points, \
     evaluate_wind
 from monohull_dynamics.forces.boat import (
@@ -16,12 +18,14 @@ from monohull_dynamics.forces.boat import (
     BoatData,
     init_firefly,
 )
+import pickle
 
 RESOLUTION = 800
 SCALE_M = 30
 
 PYTHON_DT = 0.01
 JAX_INNER_N = 100
+STATE_CACHE = [None, None, None, None, None]
 
 
 class SimulationState(typing.NamedTuple):
@@ -102,10 +106,17 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
         new_sail = jnp.pi / 4 * sail_sign[None]
 
     boat_state = boat_state._replace(rudder_angle=new_rudder, sail_angle=new_sail)
+    sim_state = sim_state._replace(boat_state=boat_state)
+    STATE_CACHE.pop(-1)
+    STATE_CACHE.insert(0, dict(sim_state=sim_state, rng=rng, physics_dt=physics_dt, inner_n=JAX_INNER_N))
+    if jnp.any(jnp.isnan(boat_state.particle_state.x)):
+        with open("test_dump.pkl", "wb") as f:
+            pickle.dump(STATE_CACHE, f)
+        raise ValueError("NaN in state")
 
     # JAX update
-    new_boat_state, new_wind_state, rng = step_wind_and_boats_with_interaction_multiple(
-        boats_state=boat_state,
+    new_boat_state, new_wind_state, rng, _ = step_wind_and_boats_with_interaction_multiple(
+        boats_state=sim_state.boat_state,
         force_model=sim_state.force_model,
         wind_state=sim_state.wind_state,
         wind_params=sim_state.wind_params,

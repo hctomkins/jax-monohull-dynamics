@@ -33,7 +33,6 @@ class BoatOne:
 
 
     def update_data(self, x, theta, sail_angle, rudder_angle):
-        print(x, "boat update")
         sprite_position = world_to_canvas(x, self.scale, self.resolution)
         self.ego_sprite.x = sprite_position[0]
         self.ego_sprite.y = sprite_position[1]
