@@ -22,7 +22,7 @@ RESOLUTION = 800
 SCALE_M = 30
 
 PYTHON_DT = 0.01
-JAX_INNER_N = 100
+JAX_INNER_N = 10
 STATE_CACHE = [None, None, None, None, None]
 
 
@@ -102,10 +102,10 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
     sim_state = sim_state._replace(boat_state=boat_state)
     STATE_CACHE.pop(-1)
     STATE_CACHE.insert(0, dict(sim_state=sim_state, rng=rng, physics_dt=physics_dt, inner_n=JAX_INNER_N))
-    if jnp.any(jnp.isnan(boat_state.particle_state.x)):
-        with open("test_dump.pkl", "wb") as f:
+    if jnp.any(jnp.isnan(boat_state.particle_state.x)) or keys[pyglet.window.key.R]:
+        with open("state_dump.pkl", "wb") as f:
             pickle.dump(STATE_CACHE, f)
-        raise ValueError("NaN in state")
+        raise ValueError("NaN in state or exit on dump")
 
     # JAX update
     new_boat_state, new_wind_state, rng, _ = step_wind_and_boats_with_interaction_multiple(
