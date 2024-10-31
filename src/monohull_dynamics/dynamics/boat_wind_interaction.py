@@ -3,7 +3,8 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 
-from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_euler, integrate_boats_jac, integrate_boats_rk4
+from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_euler, integrate_boats_jac, integrate_boats_rk4, \
+    integrate_boats_hess, integrate_boats_newmark
 from monohull_dynamics.dynamics.wind import WindParams, WindState, evaluate_wind_points, step_wind_state
 from monohull_dynamics.forces.boat import BoatData, forces_and_moments_many
 from monohull_dynamics.forces.polars.polar import rho_air
@@ -168,6 +169,10 @@ def step_wind_and_boats_with_interaction(
         boats_state = integrate_boats_rk4(boats_state, force_model, wind_velocities, inner_dt)
     elif integrator == "jac":
         boats_state = integrate_boats_jac(boats_state, force_model, wind_velocities, inner_dt)
+    elif integrator == "hess":
+        boats_state = integrate_boats_hess(boats_state, force_model, wind_velocities, inner_dt)
+    elif integrator == "newmark":
+        boats_state = integrate_boats_newmark(boats_state, force_model, wind_velocities, inner_dt)
     else:
         boats_state = integrate_boats_euler(boats_state, force_model, wind_velocities, inner_dt)
     return boats_state, wind_state, rng, wind_offsets
