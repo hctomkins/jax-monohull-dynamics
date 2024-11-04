@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 
 from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_euler, integrate_boats_jac, integrate_boats_rk4, \
-    integrate_boats_hess, integrate_boats_newmark
+    integrate_boats_hess, integrate_boats_newmark, integrate_boats_i4, integrate_boats_i2
 from monohull_dynamics.dynamics.wind import WindParams, WindState, evaluate_wind_points, step_wind_state
 from monohull_dynamics.forces.boat import BoatData, forces_and_moments_many
 from monohull_dynamics.forces.polars.polar import rho_air
@@ -165,6 +165,8 @@ def step_wind_and_boats_with_interaction(
     #
     # boats_state = boats_state._replace(particle_state=integrate_multiple(particles, f, m, inner_dt), debug_data=dd)
     # wind_offsets = wind_velocities
+    # boats_state = jax.tree.map(lambda x: x.astype(jnp.float64), boats_state)
+    # force_model = jax.tree.map(lambda x: x.astype(jnp.float64), force_model)
     if integrator == "rk4":
         boats_state = integrate_boats_rk4(boats_state, force_model, wind_velocities, inner_dt)
     elif integrator == "jac":
@@ -173,8 +175,14 @@ def step_wind_and_boats_with_interaction(
         boats_state = integrate_boats_hess(boats_state, force_model, wind_velocities, inner_dt)
     elif integrator == "newmark":
         boats_state = integrate_boats_newmark(boats_state, force_model, wind_velocities, inner_dt)
+    elif integrator == "i4":
+        boats_state = integrate_boats_i4(boats_state, force_model, wind_velocities, inner_dt)
+    elif integrator == "i2":
+        boats_state = integrate_boats_i2(boats_state, force_model, wind_velocities, inner_dt)
     else:
         boats_state = integrate_boats_euler(boats_state, force_model, wind_velocities, inner_dt)
+    # boats_state = jax.tree.map(lambda x: x.astype(jnp.float32), boats_state)
+
     return boats_state, wind_state, rng, wind_offsets
 
 
@@ -187,7 +195,7 @@ def step_wind_and_boats_with_interaction_multiple(
     inner_dt: jnp.ndarray,
     rng: jnp.ndarray,
     n: int,
-    integrator="rk4",
+    integrator="euler",
 ) -> BoatState:
     init_rolled_state = (boats_state, wind_state, rng, jnp.array([[0.0, 0.0]]))
 

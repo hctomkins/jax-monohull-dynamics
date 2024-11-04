@@ -5,6 +5,7 @@ from monohull_dynamics.dynamics.boat import j_integrate_steps, j_step_uncontroll
 import time
 import jax.profiler
 
+from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
 from monohull_dynamics.dynamics.wind import evaluate_wind
 
 
@@ -36,10 +37,19 @@ def test_e2e():
     state = j_integrate_steps(boat_state, sim_state.force_model, wind_velocity, dt, N)
     print(f"Time taken per step in jitted loop: {(time.time()-t0)/N}")
 
-    # print("tracing")
-    # with jax.profiler.trace("jax-trace-step-annotate-interp"):
-    #     state = j_integrate_many(boat_state, sim_state.force_model, wind_velocity, dt, N)
-    #     print("done")
+    boats_state = jax.tree.map(lambda x: x[None], boat_state)
+
+    step_wind_and_boats_with_interaction_multiple(boats_state, sim_state.force_model, sim_state.wind_state, sim_state.wind_params, dt, rng, n=1)
+
+    N = 50
+    print("tracing")
+    with jax.profiler.trace("jax-trace-boatstep-annotate-interp"):
+        state = j_integrate_steps(boat_state, sim_state.force_model, wind_velocity, dt, N)
+
+    with jax.profiler.trace("jax-trace-windstep-annotate-interp"):
+        step_wind_and_boats_with_interaction_multiple(boats_state, sim_state.force_model, sim_state.wind_state,
+                                                      sim_state.wind_params, dt, rng, n=1)
+        print("done")
 
 
 def test_jac():

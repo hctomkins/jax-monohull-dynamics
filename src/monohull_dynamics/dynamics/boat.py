@@ -4,6 +4,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
+from monohull_dynamics.dynamics.implicit_integration import gauss_legendre_fourth_order_jax_vector, \
+    gauss_legendre_second_order_jax_vector
 from monohull_dynamics.dynamics.particle import ParticleState, integrate
 from monohull_dynamics.forces.boat import (
     BoatData,
@@ -62,8 +64,8 @@ def step_uncontrolled_jac(boat_state: BoatState, force_model: BoatData, wind_vel
     fdot = jnp.nan_to_num(fdot)
     mdot = jnp.nan_to_num(mdot)
 
-    new_f = f + fdot * dt
-    new_m = m + mdot * dt
+    new_f = f + 0.5*fdot * dt
+    new_m = m + 0.5*mdot * dt
 
     # jax.debug.print("df_0 {df0}, df_1 {df1}", df0=f / particle_state.m, df1=fdot * dt)
 
@@ -83,6 +85,72 @@ def step_uncontrolled_jac(boat_state: BoatState, force_model: BoatData, wind_vel
     )
 
 
+def step_uncontrolled_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
+    particle_state = boat_state.particle_state
+
+    def a_func(_x, _v):
+        x, theta = _x[:2], _x[2]
+        v, thetadot = _v[:2], _v[2]
+        print(x.shape, theta.shape, v.shape, thetadot.shape)
+        f, m, dd = forces_and_moments(
+            boat_data=force_model,
+            boat_velocity=v,
+            wind_velocity=wind_velocity,
+            boat_theta=theta,
+            boat_theta_dot=thetadot,
+            sail_angle=boat_state.sail_angle,
+            rudder_angle=boat_state.rudder_angle,
+        )
+        xdotdot = f / particle_state.m
+        thetadotdot = m / particle_state.I
+        print(xdotdot.shape, thetadotdot.shape)
+        return jnp.concat([xdotdot, thetadotdot[None]], axis=-1)
+
+    x0 = jnp.concat([particle_state.x, particle_state.theta[None]], axis=-1)
+    v0 = jnp.concat([particle_state.xdot, particle_state.thetadot[None]], axis=-1)
+
+    new_x_, new_v_ = gauss_legendre_fourth_order_jax_vector(a_func, x0, v0, dt)
+    new_x, new_theta = new_x_[:2], new_x_[2]
+    new_xdot, new_thetadot = new_v_[:2], new_v_[2]
+
+    return boat_state._replace(
+        particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot)
+    )
+
+
+def step_uncontrolled_i2(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
+    particle_state = boat_state.particle_state
+
+    def a_func(_x, _v):
+        x, theta = _x[:2], _x[2]
+        v, thetadot = _v[:2], _v[2]
+        print(x.shape, theta.shape, v.shape, thetadot.shape)
+        f, m, dd = forces_and_moments(
+            boat_data=force_model,
+            boat_velocity=v,
+            wind_velocity=wind_velocity,
+            boat_theta=theta,
+            boat_theta_dot=thetadot,
+            sail_angle=boat_state.sail_angle,
+            rudder_angle=boat_state.rudder_angle,
+        )
+        xdotdot = f / particle_state.m
+        thetadotdot = m / particle_state.I
+        print(xdotdot.shape, thetadotdot.shape)
+        return jnp.concat([xdotdot, thetadotdot[None]], axis=-1)
+
+    x0 = jnp.concat([particle_state.x, particle_state.theta[None]], axis=-1)
+    v0 = jnp.concat([particle_state.xdot, particle_state.thetadot[None]], axis=-1)
+
+    new_x_, new_v_ = gauss_legendre_second_order_jax_vector(a_func, x0, v0, dt)
+    new_x, new_theta = new_x_[:2], new_x_[2]
+    new_xdot, new_thetadot = new_v_[:2], new_v_[2]
+
+    return boat_state._replace(
+        particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot)
+    )
+
+
 def step_uncontrolled_newmark(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
     particle_state = boat_state.particle_state
     f, m, dd = forces_and_moments(
@@ -98,7 +166,7 @@ def step_uncontrolled_newmark(boat_state: BoatState, force_model: BoatData, wind
     xdotdot = f / particle_state.m
     thetadotdot = m / particle_state.I
 
-    beta = 0
+    beta = 0.25
     gamma = 0.5
     # x_pred = x[n - 1] + dt * v[n - 1] + (0.5 - beta) * dt ** 2 * a[n - 1]
     # v_pred = v[n - 1] + (1 - gamma) * dt * a[n - 1]
@@ -214,8 +282,8 @@ def step_uncontrolled_hess(boat_state: BoatState, force_model: BoatData, wind_ve
     thetadot_next = boat_state.particle_state.thetadot + thetadotdot * dt + (1 / 2) * thetadotdotdot * dt ** 2 + (1 / 6) * thetadotdotdotdot * dt ** 3
 
     # Step 2: Update position
-    x_next = boat_state.particle_state.x + v_next * dt
-    theta_next = boat_state.particle_state.theta + thetadot_next * dt
+    x_next = boat_state.particle_state.x + v_next * dt + (1 / 2) * xdotdot * dt ** 2 + (1 / 6) * xdotdotdot * dt ** 3 + (1 / 24) * xdotdotdotdot * dt ** 4
+    theta_next = boat_state.particle_state.theta + thetadot_next * dt + (1 / 2) * thetadotdot * dt ** 2 + (1 / 6) * thetadotdotdot * dt ** 3 + (1 / 24) * thetadotdotdotdot * dt ** 4
 
     return boat_state._replace(
         particle_state=boat_state.particle_state._replace(
@@ -294,9 +362,12 @@ def integrate_steps(boat_state: BoatState, force_model: BoatData, wind_velocity:
 
 integrate_boats_euler = jax.vmap(step_uncontrolled, in_axes=(0, None, 0, None))
 integrate_boats_rk4 = jax.vmap(step_uncontrolled_rk4, in_axes=(0, None, 0, None))
+# integrate_boats_implicit = jax.vmap(step_uncontrolled_implicit, in_axes=(0, None, 0, None))
 integrate_boats_jac = jax.vmap(step_uncontrolled_jac, in_axes=(0, None, 0, None))
 integrate_boats_hess = jax.vmap(step_uncontrolled_hess, in_axes=(0, None, 0, None))
 integrate_boats_newmark = jax.vmap(step_uncontrolled_newmark, in_axes=(0, None, 0, None))
+integrate_boats_i4 = jax.vmap(step_uncontrolled_i4, in_axes=(0, None, 0, None))
+integrate_boats_i2 = jax.vmap(step_uncontrolled_i2, in_axes=(0, None, 0, None))
 
 
 j_step_uncontrolled = jax.jit(step_uncontrolled, static_argnums=(3,))
