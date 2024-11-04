@@ -118,9 +118,9 @@ for integrator in ["i2","i4", "newmark","hess", "jac", "rk4", "euler"]:
 ax = plt.gca()
 ax.set_yscale('log')
 
-plt.xlabel("Integrator dt (s)")
-plt.ylabel("Position (m)")
-plt.title("Integrator single step estimate of position")
+plt.xlabel("dt (s)")
+plt.ylabel("Error (m)")
+plt.title("Integrator single step error vs dt")
 plt.legend()
 
 plt.show()
