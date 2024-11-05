@@ -3,8 +3,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 
-from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_euler, integrate_boats_jac, integrate_boats_rk4, \
-    integrate_boats_hess, integrate_boats_newmark, integrate_boats_i4, integrate_boats_i2
+from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_steps
 from monohull_dynamics.dynamics.wind import WindParams, WindState, evaluate_wind_points, step_wind_state
 from monohull_dynamics.forces.boat import BoatData, forces_and_moments_many
 from monohull_dynamics.forces.polars.polar import rho_air
@@ -113,23 +112,28 @@ sail_wind_interaction_b_at_b = jax.vmap(
 )  # [BxB effector boats, at a grid of BxB affected offsets] (we're doing an extra broadcast than needed here but it's simpler)
 
 
-@partial(jax.jit, static_argnames=("integrator",))
-def step_wind_and_boats_with_interaction(
+
+@partial(jax.jit, static_argnames=["n_wind_equilibrium_steps","n_integrations_per_wind_step", "integrator"])
+def integrate_wind_and_boats_with_interaction_multiple(
     boats_state: BoatState,
     force_model: BoatData,
     wind_state: WindState,
     wind_params: WindParams,
-    inner_dt: jnp.ndarray,
+    integration_dt: jnp.ndarray,
     rng: jnp.ndarray,
-    integrator="rk4",
-) -> tuple[BoatState, WindState, jnp.ndarray]:
+    n_integrations_per_wind_step: int,
+    n_wind_equilibrium_steps: int,
+    integrator="euler",
+) -> [BoatState, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+
     rng, _ = jax.random.split(rng)
+    wind_dt = integration_dt * n_integrations_per_wind_step
     particles = boats_state.particle_state
-    wind_state, rng = step_wind_state(wind_state, rng, inner_dt, wind_params)
+    wind_state, rng = step_wind_state(wind_state, rng, wind_dt, wind_params)
     wind_velocities = evaluate_wind_points(wind_state, particles.x)  # [B, 2]
     n_boats = particles.x.shape[0]
 
-    for i in range(1):
+    for i in range(n_wind_equilibrium_steps):
         f, m, dd = forces_and_moments_many(
             force_model,
             particles.xdot,
@@ -153,55 +157,5 @@ def step_wind_and_boats_with_interaction(
         wind_offsets = jnp.sum(wind_offsets, axis=1)
         wind_velocities = apply_sail_wind_interaction(wind_velocities, wind_offsets)
 
-    # f, m, dd = forces_and_moments_many(
-    #     force_model,
-    #     particles.xdot,
-    #     wind_velocities,
-    #     particles.theta,
-    #     particles.thetadot,
-    #     boats_state.sail_angle,
-    #     boats_state.rudder_angle,
-    # )  # [B]
-    #
-    # boats_state = boats_state._replace(particle_state=integrate_multiple(particles, f, m, inner_dt), debug_data=dd)
-    # wind_offsets = wind_velocities
-    # boats_state = jax.tree.map(lambda x: x.astype(jnp.float64), boats_state)
-    # force_model = jax.tree.map(lambda x: x.astype(jnp.float64), force_model)
-    if integrator == "rk4":
-        boats_state = integrate_boats_rk4(boats_state, force_model, wind_velocities, inner_dt)
-    elif integrator == "jac":
-        boats_state = integrate_boats_jac(boats_state, force_model, wind_velocities, inner_dt)
-    elif integrator == "hess":
-        boats_state = integrate_boats_hess(boats_state, force_model, wind_velocities, inner_dt)
-    elif integrator == "newmark":
-        boats_state = integrate_boats_newmark(boats_state, force_model, wind_velocities, inner_dt)
-    elif integrator == "i4":
-        boats_state = integrate_boats_i4(boats_state, force_model, wind_velocities, inner_dt)
-    elif integrator == "i2":
-        boats_state = integrate_boats_i2(boats_state, force_model, wind_velocities, inner_dt)
-    else:
-        boats_state = integrate_boats_euler(boats_state, force_model, wind_velocities, inner_dt)
-    # boats_state = jax.tree.map(lambda x: x.astype(jnp.float32), boats_state)
-
-    return boats_state, wind_state, rng, wind_offsets
-
-
-@partial(jax.jit, static_argnames=["n", "integrator"])
-def step_wind_and_boats_with_interaction_multiple(
-    boats_state: BoatState,
-    force_model: BoatData,
-    wind_state: WindState,
-    wind_params: WindParams,
-    inner_dt: jnp.ndarray,
-    rng: jnp.ndarray,
-    n: int,
-    integrator="euler",
-) -> BoatState:
-    init_rolled_state = (boats_state, wind_state, rng, jnp.array([[0.0, 0.0]]))
-
-    def body_fn(i, rolled_state):
-        _boats_state, _wind_state, _rng, _offsets = rolled_state
-        return step_wind_and_boats_with_interaction(_boats_state, force_model, _wind_state, wind_params, inner_dt, _rng, integrator)
-
-    retuple = jax.lax.fori_loop(0, n, body_fn, init_rolled_state)
-    return retuple
+    new_boats_state = integrate_boats_steps(boats_state, force_model, wind_velocities, integration_dt, n_integrations_per_wind_step, integrator)
+    return new_boats_state, wind_state, rng, wind_offsets

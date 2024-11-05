@@ -9,7 +9,7 @@ import pyglet
 
 from monohull_dynamics.demo.overlays import BoatDemoOverlays, BoatOne
 from monohull_dynamics.dynamics.boat import BoatState
-from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
+from monohull_dynamics.dynamics.boat_wind_interaction import integrate_wind_and_boats_with_interaction_multiple
 from monohull_dynamics.dynamics.particle import ParticleState
 from monohull_dynamics.dynamics.wind import WindParams, WindState, default_wind_params, default_wind_state, evaluate_wind
 from monohull_dynamics.forces.boat import (
@@ -108,14 +108,15 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
         raise ValueError("NaN in state or exit on dump")
 
     # JAX update
-    new_boat_state, new_wind_state, rng, _ = step_wind_and_boats_with_interaction_multiple(
+    new_boat_state, new_wind_state, rng, _ = integrate_wind_and_boats_with_interaction_multiple(
         boats_state=sim_state.boat_state,
         force_model=sim_state.force_model,
         wind_state=sim_state.wind_state,
         wind_params=sim_state.wind_params,
-        inner_dt=physics_dt / JAX_INNER_N,
+        integration_dt=physics_dt / JAX_INNER_N,
         rng=rng,
-        n=JAX_INNER_N,
+        n_integrations_per_wind_step=JAX_INNER_N,
+        n_wind_equilibrium_steps=1,
         integrator="i4"
     )
     # boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)

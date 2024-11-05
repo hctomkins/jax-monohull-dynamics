@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from monohull_dynamics.demo.demo import SimulationState
-from monohull_dynamics.dynamics.boat_wind_interaction import step_wind_and_boats_with_interaction_multiple
+from monohull_dynamics.dynamics.boat_wind_interaction import integrate_wind_and_boats_with_interaction_multiple
 
 _ = SimulationState
 
@@ -55,7 +55,7 @@ t = [0]
 dt = 0.001 # physics_dt / 50
 
 for i in range(substeps):
-    boat_state, new_wind_state, rng, wind_offsets = step_wind_and_boats_with_interaction_multiple(
+    boat_state, new_wind_state, rng, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
         boats_state=boat_state,
         force_model=sim_state.force_model,
         wind_state=sim_state.wind_state,
@@ -91,7 +91,7 @@ for integrator in ["i2","i4", "newmark","hess", "jac", "rk4", "euler"]:
     xs_ss = [boat_state.particle_state.x]
     thetas_ss = [boat_state.particle_state.theta]
     for dt in t_int[1:]:
-        res_boat_state, new_wind_state, rng, wind_offsets = step_wind_and_boats_with_interaction_multiple(
+        res_boat_state, new_wind_state, rng, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
             boats_state=boat_state,
             force_model=sim_state.force_model,
             wind_state=sim_state.wind_state,
@@ -120,7 +120,7 @@ import time
 for integrator in ["i2","i4", "newmark","hess", "jac", "rk4", "euler"]:
     boat_state = sim_state.boat_state
     wind_state = sim_state.wind_state
-    res_boat_state, new_wind_state, rng, wind_offsets = step_wind_and_boats_with_interaction_multiple(
+    res_boat_state, new_wind_state, rng, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
         boats_state=boat_state,
         force_model=sim_state.force_model,
         wind_state=sim_state.wind_state,
@@ -131,7 +131,7 @@ for integrator in ["i2","i4", "newmark","hess", "jac", "rk4", "euler"]:
         integrator=integrator,
     )
     t0 = time.time()
-    res_boat_state, new_wind_state, rng, wind_offsets = step_wind_and_boats_with_interaction_multiple(
+    res_boat_state, new_wind_state, rng, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
         boats_state=boat_state,
         force_model=sim_state.force_model,
         wind_state=sim_state.wind_state,

@@ -1,5 +1,5 @@
 from monohull_dynamics.dynamics.boat_wind_interaction import we_grid
-from monohull_dynamics.dynamics.wind import wind_spawn, WindParams, N_LOCAL_GUSTS, WindState, step_wind_state, \
+from monohull_dynamics.dynamics.wind import wind_spawn, WindParams, N_LOCAL_GUSTS, step_wind_state, \
     evaluate_wind_grid, evaluate_wind, default_wind_state
 import jax.numpy as jnp
 import jax
