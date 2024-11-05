@@ -117,7 +117,7 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
         rng=rng,
         n_integrations_per_wind_step=JAX_INNER_N,
         n_wind_equilibrium_steps=1,
-        integrator="i4"
+        integrator="i4",
     )
     # boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)
 

@@ -1,8 +1,8 @@
 from functools import partial
 
-import numpy as np
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
+import numpy as np
 
 
 def gauss_legendre_second_order_jax_vector(f, x0, v0, h, tol=1e-10, max_iter=100):
@@ -56,11 +56,7 @@ def gauss_legendre_second_order_jax_vector(f, x0, v0, h, tol=1e-10, max_iter=100
         return v_est, v_est_prev, iters + 1, None
 
     # Run the Newton iteration loop
-    v_est, _, _, _ = jax.lax.while_loop(
-        cond_fun,
-        body_fun,
-        (v_est_init, jnp.inf * v_est_init, 0, None)
-    )
+    v_est, _, _, _ = jax.lax.while_loop(cond_fun, body_fun, (v_est_init, jnp.inf * v_est_init, 0, None))
 
     # Compute the updated position and velocity
     x_est = x0 + (h / 2) * v_est
@@ -141,11 +137,7 @@ def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=10)
         return v_est, v_est_prev, iters + 1
 
     # # Run the Newton iteration loop
-    v_est, _, _ = jax.lax.while_loop(
-        cond_fun,
-        body_fun,
-        (v_est_init, v_est_init * jnp.inf, 0)
-    )
+    v_est, _, _ = jax.lax.while_loop(cond_fun, body_fun, (v_est_init, v_est_init * jnp.inf, 0))
 
     # Extract v1_est and v2_est from v_est
     v1_est, v2_est = jnp.split(v_est, 2)
@@ -164,18 +156,18 @@ def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=10)
 
     return x_next, v_next
 
+
 # Example usage:
 if __name__ == "__main__":
     # Example ODE: dv/dt = -x (simple harmonic oscillator)
     def f(x, v):
         return -x
 
-
     x0, v0 = 1.0, 0.0  # Initial conditions
     h = 0.1  # Time step
 
-    xs = [jnp.array([x0,x0])]
-    vs = [jnp.array([v0,v0])]
+    xs = [jnp.array([x0, x0])]
+    vs = [jnp.array([v0, v0])]
     _as = [f(xs[0], vs[0])]
 
     for i in range(100):
@@ -188,6 +180,7 @@ if __name__ == "__main__":
     print(_as[0], _as[1])
 
     from matplotlib import pyplot as plt
+
     xs = np.array(xs)
     vs = np.array(vs)
     _as = np.array(_as)

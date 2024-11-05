@@ -112,8 +112,7 @@ sail_wind_interaction_b_at_b = jax.vmap(
 )  # [BxB effector boats, at a grid of BxB affected offsets] (we're doing an extra broadcast than needed here but it's simpler)
 
 
-
-@partial(jax.jit, static_argnames=["n_wind_equilibrium_steps","n_integrations_per_wind_step", "integrator"])
+@partial(jax.jit, static_argnames=["n_wind_equilibrium_steps", "n_integrations_per_wind_step", "integrator"])
 def integrate_wind_and_boats_with_interaction_multiple(
     boats_state: BoatState,
     force_model: BoatData,
@@ -125,7 +124,6 @@ def integrate_wind_and_boats_with_interaction_multiple(
     n_wind_equilibrium_steps: int,
     integrator="euler",
 ) -> [BoatState, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
-
     rng, _ = jax.random.split(rng)
     wind_dt = integration_dt * n_integrations_per_wind_step
     particles = boats_state.particle_state

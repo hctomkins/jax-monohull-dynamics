@@ -2,7 +2,6 @@ import typing
 
 import jax
 import jax.numpy as jnp
-import numpy as np
 
 from monohull_dynamics.dynamics.integration_utils import gauss_legendre_fourth_order_jax_vector
 from monohull_dynamics.dynamics.particle import ParticleState
@@ -10,6 +9,7 @@ from monohull_dynamics.forces.boat import (
     BoatData,
     forces_and_moments,
 )
+
 
 class BoatState(typing.NamedTuple):
     particle_state: ParticleState
@@ -41,15 +41,19 @@ def integrate_euler(boat_state: BoatState, force_model: BoatData, wind_velocity:
     # x
     new_x = particle_state.x + new_xdot * inner_dt
     new_theta = particle_state.theta + new_thetadot * inner_dt
-    new_boat_state = boat_state._replace(particle_state=ParticleState(
-        m=particle_state.m,
-        I=particle_state.I,
-        x=new_x,
-        xdot=new_xdot,
-        theta=new_theta,
-        thetadot=new_thetadot,
-    ), debug_data=dd)
+    new_boat_state = boat_state._replace(
+        particle_state=ParticleState(
+            m=particle_state.m,
+            I=particle_state.I,
+            x=new_x,
+            xdot=new_xdot,
+            theta=new_theta,
+            thetadot=new_thetadot,
+        ),
+        debug_data=dd,
+    )
     return new_boat_state
+
 
 @jax.jit
 def integrate_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
@@ -78,9 +82,7 @@ def integrate_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jn
     new_x, new_theta = new_x_[:2], new_x_[2]
     new_xdot, new_thetadot = new_v_[:2], new_v_[2]
 
-    return boat_state._replace(
-        particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot)
-    )
+    return boat_state._replace(particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot))
 
 
 def integrate_rk4(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
@@ -148,11 +150,13 @@ def integrate(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.n
     elif integrator == "i4":
         return integrate_i4(boat_state, force_model, wind_velocity, inner_dt)
 
+
 def integrate_steps(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, n_steps, integrator) -> BoatState:
     def body_fn(i, boat_state):
         return integrate(boat_state, force_model, wind_velocity, inner_dt, integrator)
 
     return jax.lax.fori_loop(0, n_steps, body_fn, boat_state)
+
 
 integrate_boats = jax.vmap(integrate, in_axes=(0, None, 0, None, None))
 integrate_boats_steps = jax.vmap(integrate_steps, in_axes=(0, None, 0, None, None, None))
