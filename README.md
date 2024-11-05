@@ -1,6 +1,6 @@
 **Note that this package is published under aGPLv3 - restrictions apply to commercial use.**
 
-# Python Monohull Sail Dynamics
+# JAX Monohull Sailing Simulation
 A package intended to provide per-element simulation of sailing monohulls. Implemented in pure JAX and aimed at 
 reinforcement learning for sailboat control. 
 
@@ -11,8 +11,8 @@ like backing of the mainsail etc. The estimator currently supports variable foil
 ## Installation
 
 ```bash
-git clone git@github.com:hctomkins/monohull-dynamics.git
-pip install -e monohull-dynamics
+git@github.com:hctomkins/jax-monohull-dynamics.git
+pip install -e jax-monohull-dynamics
 ```
 
 ## Usage
@@ -24,31 +24,43 @@ python -m monohull_dynamics.demo.demo
 ### Module
 The module entrypoint is through defining a statics object to resolve forces:
 ```python
-import monohull_dynamics as md
-boat_forces = md.forces.boat.BoatPhysics(
-    centreboard_length=1.05,
-    centreboard_chord=0.25,
-    sail_area=6.3,
-    hull_draft=0.25,
-    rudder_length=1,
-    rudder_chord=0.22,
-    beam=1.42,
-    lwl=3.58,
-    length=3.66,
-    sail_coe_dist=1,
+boat_state = BoatState(
+    particle_state=ParticleState(
+        m=jnp.array(100.0),
+        I=jnp.array(100.0),
+        x=jnp.array([0.0, 0.0]),
+        xdot=jnp.array([0.0, 0.0]),
+        theta=jnp.array(0.0),
+        thetadot=jnp.array(0.0),
+    ),
+    rudder_angle=jnp.array(0.0),
+    sail_angle=jnp.array(0.0),
+    debug_data=DUMMY_DEBUG_DATA,
 )
-integrator = md.dynamics.particle.Particle2D()
+particle_state = boat_state.particle_state
+force_model = init_boat(
+        centreboard_length=1.05,
+        centreboard_chord=0.25,
+        sail_area=6.3,
+        hull_draft=0.25,
+        rudder_length=1.0,
+        rudder_chord=0.22,
+        beam=1.42,
+        lwl=3.58,
+        length=3.66,
+        sail_coe_dist=1.0,
+    )
 
 # TODO: Example for storing boat velocity (see demo for now)
 while True:
-    force, moment, _ = boat_forces.forces_and_moments(
-        boat_velocity=# see demo,
-        wind_velocity=(0, -4),
-        boat_theta=integrator.theta,
-        boat_theta_dot=integrator.thetadot,
-        sail_angle=# see demo,
-        rudder_angle=# see demo,
+    f, m, dd = forces_and_moments(
+        boat_data=force_model,
+        boat_velocity=particle_state.xdot,
+        wind_velocity=wind_velocity,
+        boat_theta=particle_state.theta,
+        boat_theta_dot=particle_state.thetadot,
+        sail_angle=boat_state.sail_angle,
+        rudder_angle=boat_state.rudder_angle,
     )
-    integrator.step(force, moment, dt=0.001)
-
+    new_boat_state = boat_state._replace(particle_state=integrate(particle_state, f, m, inner_dt), debug_data=dd)
 ```
