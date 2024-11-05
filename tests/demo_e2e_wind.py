@@ -1,5 +1,5 @@
 from monohull_dynamics.dynamics.boat_wind_interaction import we_grid
-from monohull_dynamics.dynamics.wind import wind_spawn, WindParams, N_LOCAL_GUSTS, WindState, step_wind_state, \
+from monohull_dynamics.dynamics.wind import wind_spawn, WindParams, N_LOCAL_GUSTS, step_wind_state, \
     evaluate_wind_grid, evaluate_wind, default_wind_state
 import jax.numpy as jnp
 import jax
@@ -67,8 +67,8 @@ def animate_wind_grid():
         theta_oscillation_period_s=jnp.array(60.0),
         r_oscillation_amplitude=jnp.array(0),#2.0),
         r_oscillation_period_s=jnp.array(60.0),
-        local_gust_strength_offset_std=jnp.array(0),#1.0),
-        local_gust_theta_deg_offset_std=jnp.array(0),#5.0),
+        local_gust_strength_offset_std=jnp.array(1.0),#1.0),
+        local_gust_theta_deg_offset_std=jnp.array(5.0),#5.0),
         local_gust_radius_mean=jnp.array(10.0),
         local_gust_radius_std=jnp.array(5),
         bbox_lims=jnp.array([-R_m, R_m, -R_m, R_m])
@@ -98,7 +98,7 @@ def animate_wind_grid():
     dt = jnp.array(0.1)
     for _ in range(1000):
         # Step the wind state
-        for i in range(10):
+        for i in range(1):
             state, rng = step_wind_state(state, rng, dt, params)
 
         # Evaluate wind at grid points

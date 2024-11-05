@@ -1,9 +1,9 @@
 import jax
 import jax.numpy as jnp
 
-from monohull_dynamics.dynamics.boat_wind_interaction import we_grid, step_wind_and_boats_with_interaction, \
+from monohull_dynamics.dynamics.boat_wind_interaction import we_grid, integrate_wind_and_boats_with_interaction_multiple, \
     get_sail_wind_interaction
-from monohull_dynamics.dynamics.particle import integrate, ParticleState
+from monohull_dynamics.dynamics.particle import ParticleState
 from monohull_dynamics.dynamics.boat import BoatState
 from monohull_dynamics.dynamics.wind import default_wind_state, default_wind_params, evaluate_wind, step_wind_state
 from monohull_dynamics.forces.boat import (
@@ -165,13 +165,16 @@ def test_boat_wind_interaction(plot: bool = False):
     b_wind = bxb_wind.sum(axis=1)
 
 
-    _, _, _, wind_offsets = step_wind_and_boats_with_interaction(
+    _, _, _, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
         boats_state=boat_states,
         force_model=force_model,
         wind_state=wind_state,
         wind_params=wind_params,
-        inner_dt=jnp.array(0.01),
-        rng=jax.random.PRNGKey(0)
+        integration_dt=jnp.array(0.01),
+        n_wind_equilibrium_steps=1,
+        n_integrations_per_wind_step=1,
+        rng=jax.random.PRNGKey(0),
+        integrator="euler"
     )
 
     print(wind_offsets) # [B, 2]
