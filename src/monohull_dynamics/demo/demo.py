@@ -21,8 +21,8 @@ from monohull_dynamics.forces.boat import (
 RESOLUTION = 800
 SCALE_M = 30
 
-PYTHON_DT = 0.01
-JAX_INNER_N = 10
+PYTHON_DT = 0.1
+JAX_INNER_N = 1
 STATE_CACHE = [None, None, None, None, None]
 
 
@@ -116,7 +116,7 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
         inner_dt=physics_dt / JAX_INNER_N,
         rng=rng,
         n=JAX_INNER_N,
-        integrator="jac"
+        integrator="i4"
     )
     # boat_state = j_integrate_many(boat_state, sim_state.force_model, sim_state.wind_velocity, dt / JAX_INNER_N, JAX_INNER_N)
 

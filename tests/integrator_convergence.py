@@ -47,7 +47,7 @@ substeps = 1
 # Integrate precisely
 boat_state = sim_state.boat_state
 wind_state = sim_state.wind_state
-substeps = 500
+substeps = 300
 
 xs_int = [boat_state.particle_state.x]
 thetas_int = [boat_state.particle_state.theta]
@@ -63,6 +63,7 @@ for i in range(substeps):
         inner_dt=dt,
         rng=rng,
         n=1,
+        integrator="rk4"
     )
     xs_int.append(boat_state.particle_state.x)
     thetas_int.append(boat_state.particle_state.theta)
@@ -114,6 +115,34 @@ for integrator in ["i2","i4", "newmark","hess", "jac", "rk4", "euler"]:
 
     plt.plot(t_int, np.abs(xs_ss[:, 0, 0] - xs_int[:,0,0]), label=f"x_{integrator}")#, linestyle="--", marker="o")
     # plt.plot(t_int, xs_ss[:, 0, 1], label=f"y_{integrator}")
+
+import time
+for integrator in ["i2","i4", "newmark","hess", "jac", "rk4", "euler"]:
+    boat_state = sim_state.boat_state
+    wind_state = sim_state.wind_state
+    res_boat_state, new_wind_state, rng, wind_offsets = step_wind_and_boats_with_interaction_multiple(
+        boats_state=boat_state,
+        force_model=sim_state.force_model,
+        wind_state=sim_state.wind_state,
+        wind_params=sim_state.wind_params,
+        inner_dt=0.001,
+        rng=rng,
+        n=100,
+        integrator=integrator,
+    )
+    t0 = time.time()
+    res_boat_state, new_wind_state, rng, wind_offsets = step_wind_and_boats_with_interaction_multiple(
+        boats_state=boat_state,
+        force_model=sim_state.force_model,
+        wind_state=sim_state.wind_state,
+        wind_params=sim_state.wind_params,
+        inner_dt=0.001,
+        rng=rng,
+        n=100,
+        integrator=integrator,
+    )
+    jax.block_until_ready(res_boat_state)
+    print(f"{integrator} took {(time.time() - t0) / 100:.5f} per step")
 
 ax = plt.gca()
 ax.set_yscale('log')

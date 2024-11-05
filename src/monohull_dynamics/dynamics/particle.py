@@ -32,8 +32,8 @@ def integrate(
     thetadotdot = moment / particle_state.I
 
     # v
-    new_xdot = particle_state.xdot + 0.5* xdotdot * dt
-    new_thetadot = particle_state.thetadot + 0.5 * thetadotdot * dt
+    new_xdot = particle_state.xdot + xdotdot * dt
+    new_thetadot = particle_state.thetadot + thetadotdot * dt
 
     # x
     new_x = particle_state.x + new_xdot * dt

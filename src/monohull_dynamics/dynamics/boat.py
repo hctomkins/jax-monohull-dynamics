@@ -84,7 +84,7 @@ def step_uncontrolled_jac(boat_state: BoatState, force_model: BoatData, wind_vel
         particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot), debug_data=dd
     )
 
-
+@jax.jit
 def step_uncontrolled_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
     particle_state = boat_state.particle_state
 

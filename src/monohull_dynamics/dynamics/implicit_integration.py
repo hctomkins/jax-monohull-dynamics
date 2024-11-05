@@ -1,3 +1,5 @@
+from functools import partial
+
 import numpy as np
 import jax.numpy as jnp
 import jax
@@ -284,8 +286,8 @@ def gauss_legendre_fourth_order_jax(f, x0, v0, h, tol=0.001, max_iter=100):
 
     return x_next, v_next
 
-
-def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=100):
+@partial(jax.jit, static_argnums=(0,))
+def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=10):
     """
     Fourth-order Gauss-Legendre integrator using Newton's method.
 
@@ -348,12 +350,13 @@ def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=100
 
         # Solve for delta_v: J * delta_v = -G_value
         delta_v = -jnp.linalg.solve(J, G_value)
+        delta_v = jnp.nan_to_num(delta_v, nan=h, posinf=h, neginf=h)
 
         v_est = v_est_prev + delta_v
 
         return v_est, v_est_prev, iters + 1
 
-    # Run the Newton iteration loop
+    # # Run the Newton iteration loop
     v_est, _, _ = jax.lax.while_loop(
         cond_fun,
         body_fun,
