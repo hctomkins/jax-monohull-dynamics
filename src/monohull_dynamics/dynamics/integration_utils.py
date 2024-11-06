@@ -107,8 +107,8 @@ def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=10)
         x1_est = x0 + h * (a11 * v1_est + a12 * v2_est)
         x2_est = x0 + h * (a21 * v1_est + a22 * v2_est)
 
-        f1 = f(x1_est, v1_est)
-        f2 = f(x2_est, v2_est)
+        f1, _ = f(x1_est, v1_est)
+        f2, _ = f(x2_est, v2_est)
 
         G1 = v1_est - v0 - h * (a11 * f1 + a12 * f2)
         G2 = v2_est - v0 - h * (a21 * f1 + a22 * f2)
@@ -149,12 +149,12 @@ def gauss_legendre_fourth_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=10)
     x1_est = x0 + h * (a11 * v1_est + a12 * v2_est)
     x2_est = x0 + h * (a21 * v1_est + a22 * v2_est)
 
-    f1 = f(x1_est, v1_est)
-    f2 = f(x2_est, v2_est)
+    f1, _ = f(x1_est, v1_est)
+    f2, aux_data = f(x2_est, v2_est)
 
     v_next = v0 + h * (b1 * f1 + b2 * f2)
 
-    return x_next, v_next
+    return x_next, v_next, aux_data
 
 
 # Example usage:
