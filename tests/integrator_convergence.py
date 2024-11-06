@@ -92,6 +92,7 @@ for integrator in ["i4", "rk4", "euler"]:
     plt.plot(t_int, np.abs(xs_ss[:, 0, 0] - xs_int[:,0,0]), label=f"x_{integrator}")#, linestyle="--", marker="o")
 
 import time
+
 for integrator in ["i4", "rk4", "euler"]:
     boat_state = sim_state.boat_state
     wind_state = sim_state.wind_state

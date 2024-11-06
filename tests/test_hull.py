@@ -1,8 +1,9 @@
 import jax.numpy as jnp
 from jax import jit, vmap
+
 from monohull_dynamics.forces.hull import (
-    init_hull,
     get_hull_coeffs,
+    init_hull,
     viscous_drag,
     wave_drag,
 )

@@ -1,12 +1,13 @@
+import jax
+import jax.numpy as jnp
+
 from monohull_dynamics.forces.polars.polar import (
-    init_polar,
-    water_re,
-    knts_to_ms,
     cd0,
     cl,
+    init_polar,
+    knts_to_ms,
+    water_re,
 )
-import jax.numpy as jnp
-import jax
 
 
 def test_n12():

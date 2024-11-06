@@ -1,4 +1,4 @@
-from tests.test_boat_wind_interaction import test_demo_plots, test_boat_wind_interaction
+from tests.test_boat_wind_interaction import test_boat_wind_interaction, test_demo_plots
 
 if __name__ == "__main__":
     test_demo_plots(plot=True)
