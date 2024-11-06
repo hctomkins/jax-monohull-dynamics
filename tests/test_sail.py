@@ -1,6 +1,7 @@
-from monohull_dynamics.forces.sails import init_sail_data, sail_frame_resultant
-from jax import jit, vmap
 import jax.numpy as jnp
+from jax import jit, vmap
+
+from monohull_dynamics.forces.sails import init_sail_data, sail_frame_resultant
 
 
 def test_sail():

@@ -1,7 +1,6 @@
 import typing
 
 import jax.numpy as jnp
-from jax import lax
 
 from monohull_dynamics.forces.polars.polar import (
     PolarData,
@@ -28,11 +27,10 @@ def area(foil_data: FoilData):
 
 def foil_frame_resultant(foil_data: FoilData, foil_frame_flow: jnp.ndarray) -> jnp.ndarray:
     mag = jnp.linalg.norm(foil_frame_flow)
-    return lax.cond(
+    return jnp.where(
         mag < 1e-6,
-        lambda _: jnp.zeros(2),
-        lambda _: _foil_frame_resultant_unsafe(foil_data, foil_frame_flow),
-        None,
+        jnp.zeros(2),
+        _foil_frame_resultant_unsafe(foil_data, foil_frame_flow),
     )
 
 

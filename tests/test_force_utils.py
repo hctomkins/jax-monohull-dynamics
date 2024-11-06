@@ -1,14 +1,15 @@
-import pytest
-from monohull_dynamics.forces.force_utils import (
-    moments_about,
-    rotate_vector_about,
-    rotate_vector,
-    coe_offset,
-    foil_force_on_boat,
-    flow_at_foil,
-)
 import jax.numpy as jnp
+import pytest
 from jax import jit, vmap
+
+from monohull_dynamics.forces.force_utils import (
+    coe_offset,
+    flow_at_foil,
+    foil_force_on_boat,
+    moments_about,
+    rotate_vector,
+    rotate_vector_about,
+)
 
 
 @pytest.mark.parametrize(

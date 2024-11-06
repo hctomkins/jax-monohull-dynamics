@@ -1,14 +1,15 @@
+import time
+
+import jax.profiler
+
 from monohull_dynamics.demo.demo import (
     init_simulation_state,
 )
-import time
-import jax.profiler
-
+from monohull_dynamics.dynamics.boat import integrate, integrate_steps
+from monohull_dynamics.dynamics.boat_wind_interaction import integrate_wind_and_boats_with_interaction_multiple
 from monohull_dynamics.dynamics.wind import evaluate_wind
-from monohull_dynamics.dynamics.boat import integrate_steps, integrate
 
-
-integrate_steps_jit = jax.jit(integrate_steps, static_argnames=["integrator","n_steps"])
+integrate_steps_jit = jax.jit(integrate_steps, static_argnames=["integrator", "n_steps"])
 integrate_jit = jax.jit(integrate, static_argnames=["integrator"])
 
 
@@ -41,7 +42,7 @@ def test_e2e():
     state = integrate_steps_jit(boat_state, sim_state.force_model, wind_velocity, dt, N, "euler")
     print(f"Time taken per step in jitted loop: {(time.time()-t0)/N}")
 
-    # boats_state = jax.tree.map(lambda x: x[None], boat_state)
+    boats_state = jax.tree.map(lambda x: x[None], boat_state)
     # integrate_wind_and_boats_with_interaction_multiple(boats_state, sim_state.force_model, sim_state.wind_state, sim_state.wind_params, dt, rng, n=1)
 
     # N = 50
@@ -49,10 +50,44 @@ def test_e2e():
     # with jax.profiler.trace("jax-trace-boatstep-annotate-interp"):
     #     state = j_integrate_steps(boat_state, sim_state.force_model, wind_velocity, dt, N)
     #
-    # with jax.profiler.trace("jax-trace-windstep-annotate-interp"):
-    #     integrate_wind_and_boats_with_interaction_multiple(boats_state, sim_state.force_model, sim_state.wind_state,
-    #                                                        sim_state.wind_params, dt, rng, n=1)
-    #     print("done")
+    # with jax.disable_jit():
+    integrate_wind_and_boats_with_interaction_multiple(
+        boats_state,
+        sim_state.force_model,
+        sim_state.wind_state,
+        sim_state.wind_params,
+        dt,
+        rng,
+        n_integrations_per_wind_step=1,
+        n_wind_equilibrium_steps=1,
+        integrator="euler",
+    )
+    p = integrate_wind_and_boats_with_interaction_multiple(
+        boats_state,
+        sim_state.force_model,
+        sim_state.wind_state,
+        sim_state.wind_params,
+        dt,
+        rng,
+        n_integrations_per_wind_step=1,
+        n_wind_equilibrium_steps=1,
+        integrator="euler",
+    )
+    jax.block_until_ready(p)
+    with jax.profiler.trace("jax-trace-windstep-nojit5"):
+        p = integrate_wind_and_boats_with_interaction_multiple(
+            boats_state,
+            sim_state.force_model,
+            sim_state.wind_state,
+            sim_state.wind_params,
+            dt,
+            rng,
+            n_integrations_per_wind_step=1,
+            n_wind_equilibrium_steps=1,
+            integrator="euler",
+        )
+        jax.block_until_ready(p)
+        print("done")
 
 
 if __name__ == "__main__":

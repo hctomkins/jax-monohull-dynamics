@@ -32,6 +32,7 @@ class PolarData(typing.NamedTuple):
     alphas_by_re: jnp.ndarray  # [n_re, n_alpha]
     cd_by_re: jnp.ndarray  # [n_re, n_alpha]
     cl_by_re: jnp.ndarray  # [n_re, n_alpha]
+    cd0_by_re: jnp.ndarray  # [n_re]
 
 
 def fast_interp(x, xp, fp, left=None, right=None):
@@ -75,6 +76,7 @@ def init_polar(dir: str | None):
     cd_arrays = []
     cl_arrays = []
     alphas = []
+    cd0s = []
     all_re: list[int] = []
     # Return interpolated array of:
     # alphas [n_re, n_alpha]
@@ -98,8 +100,9 @@ def init_polar(dir: str | None):
         alphas.append(jnp.array(data["Alpha"]).astype(jnp.float32))
         cd_arrays.append(jnp.array(data["Cd"]).astype(jnp.float32))
         cl_arrays.append(jnp.array(data["Cl"]).astype(jnp.float32))
-
+        cd0s.append(jnp.array(data[data["Alpha"] == 0]["Cd"].values[0]).astype(jnp.float32))
     max_alphas = max(len(a) for a in alphas)
+
     for i, re in enumerate(all_re):
         padding = max_alphas - len(alphas[i])
         alphas[i] = jnp.pad(alphas[i], (0, padding), mode="edge")
@@ -111,11 +114,13 @@ def init_polar(dir: str | None):
         alphas_by_re=jnp.stack(alphas, dtype=jnp.float32),
         cd_by_re=jnp.stack(cd_arrays, dtype=jnp.float32),
         cl_by_re=jnp.stack(cl_arrays, dtype=jnp.float32),
+        cd0_by_re=jnp.array(cd0s, dtype=jnp.float32),
     )
 
 
 def cd0(polar_data: PolarData, re):
-    return cd(polar_data, re, 0)
+    re = re_index(polar_data, re)
+    return polar_data.cd0_by_re[re]
 
 
 def cd(polar_data: PolarData, re, alpha_deg):

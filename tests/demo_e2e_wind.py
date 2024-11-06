@@ -1,9 +1,16 @@
-from monohull_dynamics.dynamics.boat_wind_interaction import we_grid
-from monohull_dynamics.dynamics.wind import wind_spawn, WindParams, N_LOCAL_GUSTS, step_wind_state, \
-    evaluate_wind_grid, evaluate_wind, default_wind_state
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
 
+from monohull_dynamics.dynamics.boat_wind_interaction import we_grid
+from monohull_dynamics.dynamics.wind import (
+    N_LOCAL_GUSTS,
+    WindParams,
+    default_wind_state,
+    evaluate_wind,
+    evaluate_wind_grid,
+    step_wind_state,
+    wind_spawn,
+)
 from monohull_dynamics.forces.boat import forces_and_moments, init_firefly
 
 

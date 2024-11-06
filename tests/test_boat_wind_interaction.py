@@ -1,16 +1,18 @@
 import jax
 import jax.numpy as jnp
-
-from monohull_dynamics.dynamics.boat_wind_interaction import we_grid, integrate_wind_and_boats_with_interaction_multiple, \
-    get_sail_wind_interaction
-from monohull_dynamics.dynamics.particle import ParticleState
-from monohull_dynamics.dynamics.boat import BoatState
-from monohull_dynamics.dynamics.wind import default_wind_state, default_wind_params, evaluate_wind, step_wind_state
-from monohull_dynamics.forces.boat import (
-    forces_and_moments, DUMMY_DEBUG_DATA, init_firefly,
-)
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from monohull_dynamics.dynamics.boat import BoatState
+from monohull_dynamics.dynamics.boat_wind_interaction import get_sail_wind_interaction, integrate_wind_and_boats_with_interaction_multiple, we_grid
+from monohull_dynamics.dynamics.particle import ParticleState
+from monohull_dynamics.dynamics.wind import default_wind_params, default_wind_state, evaluate_wind, step_wind_state
+from monohull_dynamics.forces.boat import (
+    DUMMY_DEBUG_DATA,
+    forces_and_moments,
+    init_firefly,
+)
+
 np.set_printoptions(suppress=True)
 
 def _init_default_boat(x):

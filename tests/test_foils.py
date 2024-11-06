@@ -1,7 +1,7 @@
-from monohull_dynamics.forces.foils import foil_frame_resultant, FoilData
-from jax import jit, vmap
 import jax.numpy as jnp
+from jax import jit, vmap
 
+from monohull_dynamics.forces.foils import FoilData, foil_frame_resultant
 from monohull_dynamics.forces.polars.polar import init_polar
 
 
