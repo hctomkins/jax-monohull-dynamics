@@ -21,7 +21,7 @@ from monohull_dynamics.forces.boat import (
 RESOLUTION = 800
 SCALE_M = 30
 
-PYTHON_DT = 0.1
+PYTHON_DT = 0.01
 JAX_INNER_N = 1
 STATE_CACHE = [None, None, None, None, None]
 

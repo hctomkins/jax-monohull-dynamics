@@ -73,16 +73,18 @@ def integrate_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jn
         )
         xdotdot = f / particle_state.m
         thetadotdot = m / particle_state.I
-        return jnp.concat([xdotdot, thetadotdot[None]], axis=-1)
+        return jnp.concat([xdotdot, thetadotdot[None]], axis=-1), dd
 
     x0 = jnp.concat([particle_state.x, particle_state.theta[None]], axis=-1)
     v0 = jnp.concat([particle_state.xdot, particle_state.thetadot[None]], axis=-1)
 
-    new_x_, new_v_ = gauss_legendre_fourth_order_jax_vector(a_func, x0, v0, dt)
+    new_x_, new_v_, dd = gauss_legendre_fourth_order_jax_vector(a_func, x0, v0, dt)
     new_x, new_theta = new_x_[:2], new_x_[2]
     new_xdot, new_thetadot = new_v_[:2], new_v_[2]
 
-    return boat_state._replace(particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot))
+    return boat_state._replace(
+        particle_state=boat_state.particle_state._replace(x=new_x, xdot=new_xdot, theta=new_theta, thetadot=new_thetadot), debug_data=dd
+    )
 
 
 def integrate_rk4(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
