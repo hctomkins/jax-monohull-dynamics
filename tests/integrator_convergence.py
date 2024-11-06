@@ -31,7 +31,7 @@ JAX_INNER_N = 1
 xs_int = [boat_state.particle_state.x]
 thetas_int = [boat_state.particle_state.theta]
 t = [0]
-dt = 0.001 # physics_dt / 50
+dt = 0.001  # physics_dt / 50
 
 for i in range(substeps):
     boat_state, new_wind_state, rng, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
@@ -43,7 +43,7 @@ for i in range(substeps):
         rng=rng,
         n_integrations_per_wind_step=1,
         n_wind_equilibrium_steps=1,
-        integrator="rk4"
+        integrator="rk4",
     )
     xs_int.append(boat_state.particle_state.x)
     thetas_int.append(boat_state.particle_state.theta)
@@ -60,7 +60,7 @@ t_int = np.array(t)
 
 # Extrapolate integrator single step
 print(boat_state.particle_state.x.shape, "init shape")
-for integrator in ["i4", "rk4", "euler"]:
+for integrator in ["i2", "i4", "rk4", "euler"]:
     boat_state = sim_state.boat_state
     wind_state = sim_state.wind_state
     xs_ss = [boat_state.particle_state.x]
@@ -89,10 +89,11 @@ for integrator in ["i4", "rk4", "euler"]:
     xs_ss[np.abs(xs_ss) > 10] = np.nan
     thetas_ss[np.abs(thetas_ss) > 10] = np.nan
 
-    plt.plot(t_int, np.abs(xs_ss[:, 0, 0] - xs_int[:,0,0]), label=f"x_{integrator}")#, linestyle="--", marker="o")
+    plt.plot(t_int, np.abs(xs_ss[:, 0, 0] - xs_int[:, 0, 0]), label=f"x_{integrator}")  # , linestyle="--", marker="o")
 
 import time
-for integrator in ["i4", "rk4", "euler"]:
+
+for integrator in ["i2", "i4", "rk4", "euler"]:
     boat_state = sim_state.boat_state
     wind_state = sim_state.wind_state
     res_boat_state, new_wind_state, rng, wind_offsets = integrate_wind_and_boats_with_interaction_multiple(
@@ -122,7 +123,7 @@ for integrator in ["i4", "rk4", "euler"]:
     print(f"{integrator} took {(time.time() - t0) / 100:.5f} per step")
 
 ax = plt.gca()
-ax.set_yscale('log')
+ax.set_yscale("log")
 
 plt.xlabel("dt (s)")
 plt.ylabel("Error (m)")

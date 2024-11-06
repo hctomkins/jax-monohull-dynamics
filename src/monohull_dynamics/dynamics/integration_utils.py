@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 
 
-def gauss_legendre_second_order_jax_vector(f, x0, v0, h, tol=1e-10, max_iter=100):
+def gauss_legendre_second_order_jax_vector(f, x0, v0, h, tol=1e-12, max_iter=10):
     """
     Second-order Gauss-Legendre integrator (implicit midpoint method) using Newton's method.
 
@@ -29,20 +29,21 @@ def gauss_legendre_second_order_jax_vector(f, x0, v0, h, tol=1e-10, max_iter=100
     # Define the function G(v_est) for Newton's method
     def G(v_est):
         x_est = x0 + (h / 2) * v_est
-        return v_est - v0 - (h / 2) * f(x_est, v_est)
+        r, _ = f(x_est, v_est)
+        return v_est - v0 - (h / 2) * r
 
     # Initial guess for v_est (can be v0)
     v_est_init = v0
 
     def cond_fun(carry):
-        v_est, v_est_prev, iters, _ = carry
+        v_est, v_est_prev, iters = carry
         # Check for convergence based on the norm of the difference
         converged = jnp.linalg.norm(v_est - v_est_prev) < tol
         # jax.debug.print("{c}", c=converged)
         return (iters < max_iter) & (~converged)
 
     def body_fun(carry):
-        v_est_prev, _, iters, _ = carry
+        v_est_prev, _, iters = carry
 
         # Compute G(v_est_prev) and its Jacobian
         G_value = G(v_est_prev)
@@ -53,17 +54,18 @@ def gauss_legendre_second_order_jax_vector(f, x0, v0, h, tol=1e-10, max_iter=100
 
         v_est = v_est_prev + delta_v
 
-        return v_est, v_est_prev, iters + 1, None
+        return v_est, v_est_prev, iters + 1
 
     # Run the Newton iteration loop
-    v_est, _, _, _ = jax.lax.while_loop(cond_fun, body_fun, (v_est_init, jnp.inf * v_est_init, 0, None))
+    v_est, _, _, _ = jax.lax.while_loop(cond_fun, body_fun, (v_est_init, jnp.inf * v_est_init, 0))
 
     # Compute the updated position and velocity
     x_est = x0 + (h / 2) * v_est
+    r, aux_data = f(x_est, v_est)
     x_next = x0 + h * v_est
-    v_next = v0 + h * f(x_est, v_est)
+    v_next = v0 + h * r
 
-    return x_next, v_next
+    return x_next, v_next, aux_data
 
 
 @partial(jax.jit, static_argnums=(0,))

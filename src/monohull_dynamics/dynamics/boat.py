@@ -1,9 +1,10 @@
 import typing
+from functools import partial
 
 import jax
 import jax.numpy as jnp
 
-from monohull_dynamics.dynamics.integration_utils import gauss_legendre_fourth_order_jax_vector
+from monohull_dynamics.dynamics.integration_utils import gauss_legendre_fourth_order_jax_vector, gauss_legendre_second_order_jax_vector
 from monohull_dynamics.dynamics.particle import ParticleState
 from monohull_dynamics.forces.boat import (
     BoatData,
@@ -55,8 +56,7 @@ def integrate_euler(boat_state: BoatState, force_model: BoatData, wind_velocity:
     return new_boat_state
 
 
-@jax.jit
-def integrate_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt) -> BoatState:
+def integrate_implicit(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, dt, order) -> BoatState:
     particle_state = boat_state.particle_state
 
     def a_func(_x, _v):
@@ -78,7 +78,12 @@ def integrate_i4(boat_state: BoatState, force_model: BoatData, wind_velocity: jn
     x0 = jnp.concat([particle_state.x, particle_state.theta[None]], axis=-1)
     v0 = jnp.concat([particle_state.xdot, particle_state.thetadot[None]], axis=-1)
 
-    new_x_, new_v_, dd = gauss_legendre_fourth_order_jax_vector(a_func, x0, v0, dt)
+    if order == 4:
+        new_x_, new_v_, dd = gauss_legendre_fourth_order_jax_vector(a_func, x0, v0, dt)
+    elif order == 2:
+        new_x_, new_v_, dd = gauss_legendre_second_order_jax_vector(a_func, x0, v0, dt)
+    else:
+        raise ValueError(f"Order {order} not supported")
     new_x, new_theta = new_x_[:2], new_x_[2]
     new_xdot, new_thetadot = new_v_[:2], new_v_[2]
 
@@ -144,13 +149,16 @@ def integrate_rk4(boat_state: BoatState, force_model: BoatData, wind_velocity: j
     )
 
 
+@partial(jax.jit, static_argnames=["integrator"])
 def integrate(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, integrator) -> BoatState:
     if integrator == "euler":
         return integrate_euler(boat_state, force_model, wind_velocity, inner_dt)
     elif integrator == "rk4":
         return integrate_rk4(boat_state, force_model, wind_velocity, inner_dt)
     elif integrator == "i4":
-        return integrate_i4(boat_state, force_model, wind_velocity, inner_dt)
+        return integrate_implicit(boat_state, force_model, wind_velocity, inner_dt, order=4)
+    elif integrator == "i2":
+        return integrate_implicit(boat_state, force_model, wind_velocity, inner_dt, order=2)
 
 
 def integrate_steps(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt, n_steps, integrator) -> BoatState:
