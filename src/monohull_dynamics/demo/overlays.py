@@ -12,13 +12,13 @@ def world_to_canvas(position: jnp.ndarray, scale, resolution) -> jnp.ndarray:
     return ((position / scale) + 0.5) * resolution
 
 
-class BoatOne:
-    def __init__(self, scale_m, resolution):
+class Boat:
+    def __init__(self, scale_m, resolution, sprite_fp="boat.png"):
         self.draw_batch = pyglet.graphics.Batch()
         self.scale = scale_m
         self.resolution = resolution
 
-        boat_image = pyglet.resource.image("boat.png")
+        boat_image = pyglet.resource.image(sprite_fp)
         center_image(boat_image)
         self.ego_sprite = pyglet.sprite.Sprite(boat_image, batch=self.draw_batch)
         h = self.ego_sprite.height

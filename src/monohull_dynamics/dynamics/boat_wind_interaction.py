@@ -157,3 +157,25 @@ def integrate_wind_and_boats_with_interaction_multiple(
 
     new_boats_state = integrate_boats_steps(boats_state, force_model, wind_velocities, integration_dt, n_integrations_per_wind_step, integrator)
     return new_boats_state, wind_state, rng, wind_offsets
+
+
+def set_boat_foil_angles(
+        boat_state: BoatState,
+        rudder_angle: jnp.ndarray,
+        sail_angle: jnp.ndarray,
+        wind_velocity: jnp.ndarray,
+) -> BoatState:
+    boat_vector = jnp.array(
+        [
+            jnp.cos(boat_state.particle_state.theta),
+            jnp.sin(boat_state.particle_state.theta),
+        ]
+    )
+    sail_sign = -jnp.sign(jnp.cross(boat_vector, wind_velocity))
+    sail_angle = jnp.clip(jnp.abs(sail_angle), min=0, max=jnp.pi / 2) * sail_sign
+    rudder_angle = jnp.clip(rudder_angle, -jnp.pi / 4, jnp.pi / 4)
+
+    boat_state = boat_state._replace(rudder_angle=rudder_angle, sail_angle=sail_angle)
+    return boat_state
+
+set_boats_foil_angles = jax.vmap(set_boat_foil_angles, in_axes=(0, 0, 0, None))

@@ -12,6 +12,7 @@ from monohull_dynamics.forces.boat import (
 
 
 class BoatState(typing.NamedTuple):
+    # Positive rudder angle turns to starboard
     particle_state: ParticleState
     rudder_angle: jnp.ndarray
     sail_angle: jnp.ndarray
