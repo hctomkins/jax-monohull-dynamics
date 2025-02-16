@@ -3,7 +3,7 @@ from functools import partial
 import jax
 import jax.numpy as jnp
 
-from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_steps
+from monohull_dynamics.dynamics.boat import BoatState, integrate_boats_steps, check_boat_state_consistency
 from monohull_dynamics.dynamics.wind import WindParams, WindState, evaluate_wind_points, step_wind_state
 from monohull_dynamics.forces.boat import BoatData, forces_and_moments_many
 from monohull_dynamics.forces.polars.polar import rho_air
@@ -124,6 +124,7 @@ def integrate_wind_and_boats_with_interaction_multiple(
     n_wind_equilibrium_steps: int,
     integrator="euler",
 ) -> [BoatState, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    check_boat_state_consistency(boats_state)
     rng, _ = jax.random.split(rng)
     wind_dt = integration_dt * n_integrations_per_wind_step
     particles = boats_state.particle_state
@@ -165,6 +166,14 @@ def set_boat_foil_angles(
         sail_angle: jnp.ndarray,
         wind_velocity: jnp.ndarray,
 ) -> BoatState:
+    if len(boat_state.particle_state.x.shape) != 1:
+        raise ValueError("Expected a single boat state")
+    if len(rudder_angle.shape) != 0:
+        raise ValueError("Expected a single rudder angle")
+    if len(sail_angle.shape) != 0:
+        raise ValueError("Expected a single sail angle")
+    if len(wind_velocity.shape) != 1:
+        raise ValueError("Expected a single wind velocity")
     boat_vector = jnp.array(
         [
             jnp.cos(boat_state.particle_state.theta),
@@ -176,6 +185,7 @@ def set_boat_foil_angles(
     rudder_angle = jnp.clip(rudder_angle, -jnp.pi / 4, jnp.pi / 4)
 
     boat_state = boat_state._replace(rudder_angle=rudder_angle, sail_angle=sail_angle)
+    check_boat_state_consistency(boat_state)
     return boat_state
 
 set_boats_foil_angles = jax.vmap(set_boat_foil_angles, in_axes=(0, 0, 0, 0))

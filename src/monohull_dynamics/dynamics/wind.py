@@ -185,6 +185,8 @@ def evaluate_wind(wind_state: WindState, pos: jnp.ndarray) -> jnp.ndarray:
     Returns: [2]
     """
     # Base wind
+    if len(pos.shape) != 1 and pos.shape[0] != 2:
+        raise ValueError("Position must be of shape [2]")
     base_theta_rad = jnp.deg2rad(wind_state.current_base_theta)
     base_wind = jnp.array([jnp.cos(base_theta_rad), jnp.sin(base_theta_rad)]) * wind_state.current_base_r  # [2]
     gusts_effect = evaluate_gusts_effect(
