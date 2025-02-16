@@ -9,10 +9,10 @@ import pyglet
 
 from monohull_dynamics.demo.overlays import BoatDemoOverlays, Boat
 from monohull_dynamics.dynamics.boat import BoatState
-from monohull_dynamics.dynamics.boat_wind_interaction import integrate_wind_and_boats_with_interaction_multiple, \
-    set_boat_foil_angles, set_boats_foil_angles
+from monohull_dynamics.dynamics.boat_wind_interaction import integrate_wind_and_boats_with_interaction_multiple, set_boats_foil_angles
 from monohull_dynamics.dynamics.particle import ParticleState
-from monohull_dynamics.dynamics.wind import WindParams, WindState, default_wind_params, default_wind_state, evaluate_wind
+from monohull_dynamics.dynamics.wind import WindParams, WindState, default_wind_params, default_wind_state, \
+    evaluate_wind, evaluate_wind_points
 from monohull_dynamics.forces.boat import (
     DUMMY_DEBUG_DATA,
     BoatData,
@@ -25,6 +25,21 @@ SCALE_M = 30
 PYTHON_DT = 0.01
 JAX_INNER_N = 1
 STATE_CACHE = [None, None, None, None, None]
+
+def get_sail_and_rudder(keys, up_key, down_key, left_key, right_key):
+    if keys[left_key]:
+        rudder_delta = -jnp.deg2rad(2)
+    elif keys[right_key]:
+        rudder_delta = jnp.deg2rad(2)
+    else:
+        rudder_delta = 0
+    if keys[up_key]:
+        new_sail = jnp.pi / 16
+    elif keys[down_key]:
+        new_sail = jnp.pi / 2
+    else:
+        new_sail = jnp.pi / 4
+    return new_sail, rudder_delta
 
 
 class SimulationState(typing.NamedTuple):
@@ -41,7 +56,7 @@ class MutableSimulationState:
     start_time: float
 
 
-def init_simulation_state(rng):
+def init_simulation_state(rng) -> SimulationState:
     wind_params = default_wind_params(bbox_lims=jnp.array([-100, 100, -100, 100]))
     wind_state = default_wind_state(wind_params, rng)
     boat_state = BoatState(
@@ -71,23 +86,14 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
     rng, _ = jax.random.split(rng)
 
     boats_state = sim_state.boats_state
-    local_wind_velocity = evaluate_wind(sim_state.wind_state, boats_state.particle_state.x)  # [B, 2]
+    local_wind_velocity = evaluate_wind_points(sim_state.wind_state, boats_state.particle_state.x)  # [B, 2]
 
     # python update
-    if keys[pyglet.window.key.LEFT]:
-        new_rudder = boats_state.rudder_angle - jnp.deg2rad(2)
-    elif keys[pyglet.window.key.RIGHT]:
-        new_rudder = boats_state.rudder_angle + jnp.deg2rad(2)
-    else:
-        new_rudder = boats_state.rudder_angle
+    new_sail, rudder_delta = get_sail_and_rudder(keys, pyglet.window.key.UP, pyglet.window.key.DOWN, pyglet.window.key.LEFT, pyglet.window.key.RIGHT)
+    new_rudder = boats_state.rudder_angle + rudder_delta
+    new_sail = jnp.ones_like(new_rudder) * new_sail
 
-    new_sail = jnp.ones_like(boats_state.rudder_angle)
-    if keys[pyglet.window.key.UP]:
-        new_sail = jnp.pi / 16 * new_sail
-    elif keys[pyglet.window.key.DOWN]:
-        new_sail = jnp.pi / 2 * new_sail
-    else:
-        new_sail = jnp.pi / 4 * new_sail
+    print(new_rudder.shape, new_sail.shape)
 
     boats_state = set_boats_foil_angles(
         boats_state,

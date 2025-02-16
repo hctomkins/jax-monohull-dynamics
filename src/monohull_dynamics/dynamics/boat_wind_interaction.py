@@ -178,4 +178,4 @@ def set_boat_foil_angles(
     boat_state = boat_state._replace(rudder_angle=rudder_angle, sail_angle=sail_angle)
     return boat_state
 
-set_boats_foil_angles = jax.vmap(set_boat_foil_angles, in_axes=(0, 0, 0, None))
+set_boats_foil_angles = jax.vmap(set_boat_foil_angles, in_axes=(0, 0, 0, 0))
