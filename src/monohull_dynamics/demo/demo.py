@@ -93,7 +93,6 @@ def sim_step(measured_dt: float, global_state: MutableSimulationState, keys, ove
     new_rudder = boats_state.rudder_angle + rudder_delta
     new_sail = jnp.ones_like(new_rudder) * new_sail
 
-    print(new_rudder.shape, new_sail.shape)
 
     boats_state = set_boats_foil_angles(
         boats_state,
