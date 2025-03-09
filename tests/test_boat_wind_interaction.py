@@ -61,8 +61,8 @@ def test_demo_plots(plot: bool = False):
         )
         boat_state = BoatState(
             particle_state=particle_state,
-            rudder_angle=0.0,
-            sail_angle=theta,
+            rudder_angle=jnp.array(0.0),
+            sail_angle=jnp.array(theta),
             debug_data=DUMMY_DEBUG_DATA,
         )
         force_model = init_firefly()
@@ -81,7 +81,7 @@ def test_demo_plots(plot: bool = False):
             )
             print(f)
 
-        frontal_area = 8
+        frontal_area = jnp.array(8.0)
         with jax.disable_jit():
             wind_effects, factor = we_grid(f, frontal_area, particle_state.theta + boat_state.sail_angle,
                                            wind_velocity, at)

@@ -33,7 +33,7 @@ def cone_effect(cone_u: jnp.ndarray, base_width: jnp.ndarray, end_width: jnp.nda
 @jax.jit
 def get_sail_wind_interaction(
     force_on_sail: jnp.ndarray, sail_area: jnp.ndarray, sail_theta: jnp.ndarray, base_wind: jnp.ndarray, at: jnp.ndarray, min_threshold: float = 0.1
-) -> jnp.ndarray:
+) -> tuple[jnp.ndarray, jnp.ndarray]:
     """
     Compute the effect of the boat on the wind at a position relative to the boat. This is an additive residual
     force_on_sail: [2]
@@ -44,6 +44,18 @@ def get_sail_wind_interaction(
     # f = ma = d/dt (mv)
     # if we can approximate delta t (time force acts on wind) from frontal area
     # then we can compute the change in wind velocity interpolated over the falloff cone
+    if force_on_sail.shape != (2,):
+        raise ValueError("force_on_sail must be [2]")
+    if sail_area.shape != ():
+        raise ValueError("sail_area must be scalar")
+    if sail_theta.shape != ():
+        raise ValueError("sail_theta must be scalar")
+    if base_wind.shape != (2,):
+        raise ValueError("base_wind must be [2]")
+    if at.shape != (2,):
+        raise ValueError("at must be [2]")
+
+
     acting_time = 3.0
     acting_height = 6.0
     acting_length = sail_area / acting_height
