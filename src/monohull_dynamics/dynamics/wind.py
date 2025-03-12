@@ -198,4 +198,5 @@ def evaluate_wind(wind_state: WindState, pos: jnp.ndarray) -> jnp.ndarray:
 
 
 evaluate_wind_points = jax.vmap(evaluate_wind, in_axes=(None, 0))
+evaluate_wind_points_history = jax.vmap(evaluate_wind_points, in_axes=(0, None))
 evaluate_wind_grid = jax.jit(jax.vmap(evaluate_wind_points, in_axes=(None, 0)))

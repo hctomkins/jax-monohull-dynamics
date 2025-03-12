@@ -1,6 +1,8 @@
 import jax.numpy as jnp
 import pyglet
 
+from src.rltr2.rules.collision import BoatShape, positions_and_shape_to_capsules
+
 
 def center_image(image):
     """Sets an image's anchor point to its center"""
@@ -13,46 +15,74 @@ def world_to_canvas(position: jnp.ndarray, scale, resolution) -> jnp.ndarray:
 
 
 class Boat:
-    def __init__(self, scale_m, resolution, sprite_fp="boat.png"):
+    def __init__(self, scale_m, resolution, sprite_fp="boat.png", boat_shape: BoatShape | None = None, colour = (255, 255, 255)):
         self.draw_batch = pyglet.graphics.Batch()
         self.scale = scale_m
         self.resolution = resolution
+        self.m_to_px = resolution / scale_m
 
         boat_image = pyglet.resource.image(sprite_fp)
         center_image(boat_image)
         self.ego_sprite = pyglet.sprite.Sprite(boat_image, batch=self.draw_batch)
-        h = self.ego_sprite.height
-        h_m = h * scale_m / resolution
-        sf = 3.8 / h_m
-        self.ego_sprite.scale = sf
-        self.ego_rudder = pyglet.shapes.Line(0, 0, -20 * sf, 0, width=5, color=(0, 0, 255), batch=self.draw_batch)
-        self.ego_rudder.anchor_x = 70 * sf
+        sprite_height_px = self.ego_sprite.height
+        sprite_height_m = sprite_height_px / self.m_to_px
+        sprite_scale_factor = 3.8 / sprite_height_m # why 3.8? length of boat?
+        self.ego_sprite.scale = sprite_scale_factor
+        self.ego_rudder = pyglet.shapes.Line(0, 0, -20 * sprite_scale_factor, 0, width=5, color=(0, 0, 255), batch=self.draw_batch)
+        self.ego_rudder.anchor_x = 70 * sprite_scale_factor
         self.ego_rudder.anchor_y = 0
-        self.ego_rudder.scale = sf
-        self.ego_sail = pyglet.shapes.Line(0, 0, -80 * sf, 0, width=2, color=(0, 255, 0), batch=self.draw_batch)
+        self.ego_rudder.scale = sprite_scale_factor
+        self.ego_sail = pyglet.shapes.Line(0, 0, -80 * sprite_scale_factor, 0, width=2, color=(0, 255, 0), batch=self.draw_batch)
         self.ego_sail.anchor_x = 0
         self.ego_sail.anchor_y = 0
+        self.boat_shape = boat_shape
+
+        # if boat_shape is not None:
+        #     self.front_circle = pyglet.shapes.Circle(0, 0, boat_shape.boat_capsule_radius.item() * self.m_to_px, color=colour, batch=self.draw_batch)
+        #     self.back_circle = pyglet.shapes.Circle(0, 0, boat_shape.boat_capsule_radius.item() * self.m_to_px, color=colour, batch=self.draw_batch)
+        #     self.boat_line = pyglet.shapes.Line(0, 0, 0, 0, width=2, color=colour, batch=self.draw_batch)
+
+
+    # def xtheta_to_capsules(self, x, theta, boat_shape: BoatShape):
+    #     boat_starts, boat_segments = positions_and_shape_to_capsules(
+    #         boat_positions=x[None],
+    #         boat_thetas=theta[None],
+    #         boat_shape=boat_shape
+    #     )
+    #     return boat_starts[0], boat_segments[0]
 
     def update_data(self, x, theta, sail_angle, rudder_angle):
         sprite_position = world_to_canvas(x, self.scale, self.resolution)
         self.ego_sprite.x = sprite_position[0]
         self.ego_sprite.y = sprite_position[1]
         self.ego_sprite.rotation = 90 - jnp.rad2deg(theta)
-        self.ego_sprite.draw()
         rudder_position = world_to_canvas(x, self.scale, self.resolution)
         self.ego_rudder.x = rudder_position[0]
         self.ego_rudder.y = rudder_position[1]
         self.ego_rudder.rotation = -jnp.rad2deg(theta + rudder_angle)
-        self.ego_rudder.draw()
         sail_position = world_to_canvas(x, self.scale, self.resolution)
         self.ego_sail.x = sail_position[0]
         self.ego_sail.y = sail_position[1]
         self.ego_sail.rotation = -jnp.rad2deg(theta + sail_angle)
-        self.ego_sail.draw()
+
+        # if self.boat_shape is not None:
+        #     boat_start, boat_segment = self.xtheta_to_capsules(x, theta, self.boat_shape)
+        #     print(boat_start.shape, boat_segment.shape, '!!')
+        #     start = world_to_canvas(boat_start, self.scale, self.resolution)
+        #     end = world_to_canvas(boat_start + boat_segment, self.scale, self.resolution)
+        #     self.boat_line.x = start[0]
+        #     self.boat_line.y = start[1]
+        #     self.boat_line.x2 = end[0]
+        #     self.boat_line.y2 = end[1]
+        #     self.front_circle.x = start[0]
+        #     self.front_circle.y = start[1]
+        #     self.back_circle.x = end[0]
+        #     self.back_circle.y = end[1]
+
+        self.draw()
 
     def draw(self):
         self.draw_batch.draw()
-
 
 class BoatDemoOverlays:
     def __init__(self, resolution):
