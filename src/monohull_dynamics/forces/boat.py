@@ -200,16 +200,16 @@ forces_and_moments_many = jax.vmap(forces_and_moments, in_axes=(None, 0, 0, 0, 0
 
 def init_firefly():
     return init_boat(
-        centreboard_length=1.05,
-        centreboard_chord=0.25,
-        sail_area=6.3,
-        hull_draft=0.25,
-        rudder_length=1.0,
-        rudder_chord=0.22,
-        beam=1.42,
-        lwl=3.58,
-        length=3.66,
-        sail_coe_dist=1.0,
+        centreboard_length=jnp.array(1.05),
+        centreboard_chord=jnp.array(0.25),
+        sail_area=jnp.array(6.3),
+        hull_draft=jnp.array(0.25),
+        rudder_length=jnp.array(1.0),
+        rudder_chord=jnp.array(0.22),
+        beam=jnp.array(1.42),
+        lwl=jnp.array(3.58),
+        length=jnp.array(3.66),
+        sail_coe_dist=jnp.array(1.0),
     )
 
 

@@ -18,6 +18,28 @@ class BoatState(typing.NamedTuple):
     sail_angle: jnp.ndarray
     debug_data: dict
 
+def check_boat_state_consistency(boat_state: BoatState):
+    num_dims = boat_state.particle_state.x.shape
+    if len(num_dims) > 3:
+        raise ValueError("Unusual shape for boat state")
+    vecs = [
+        boat_state.particle_state.x,
+        boat_state.particle_state.xdot,
+    ]
+    scalars = [
+        boat_state.particle_state.theta,
+        boat_state.particle_state.thetadot,
+        boat_state.rudder_angle,
+        boat_state.sail_angle,
+        boat_state.particle_state.I,
+        boat_state.particle_state.m,
+    ]
+    if not all(s.shape == scalars[0].shape for s in scalars):
+        raise ValueError("Inconsistent scalar shapes")
+    if not all(v.shape == vecs[0].shape for v in vecs):
+        raise ValueError("Inconsistent vector shapes")
+
+    return len(num_dims) - 1
 
 def integrate_euler(boat_state: BoatState, force_model: BoatData, wind_velocity: jnp.ndarray, inner_dt) -> BoatState:
     particle_state = boat_state.particle_state

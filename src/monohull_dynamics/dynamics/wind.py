@@ -96,6 +96,8 @@ def default_wind_state(params: WindParams, rng) -> WindState:
 def step_wind_state(state: WindState, rng: jnp.ndarray, dt: jnp.ndarray, params: WindParams) -> tuple[WindState, jnp.ndarray]:
     rng, _ = jax.random.split(rng)
     xmin, xmax, ymin, ymax = params.bbox_lims
+    if state.current_theta_phase.shape != ():
+        raise ValueError("Theta phase must be scalar")
 
     # Step 1: Update the base wind oscillation for direction (theta) and magnitude (r)
     new_theta_phase = (state.current_theta_phase + (2 * jnp.pi / params.theta_oscillation_period_s) * dt) % (2 * jnp.pi)
@@ -185,6 +187,8 @@ def evaluate_wind(wind_state: WindState, pos: jnp.ndarray) -> jnp.ndarray:
     Returns: [2]
     """
     # Base wind
+    if pos.shape != (2,):
+        raise ValueError("Position must be [2]")
     base_theta_rad = jnp.deg2rad(wind_state.current_base_theta)
     base_wind = jnp.array([jnp.cos(base_theta_rad), jnp.sin(base_theta_rad)]) * wind_state.current_base_r  # [2]
     gusts_effect = evaluate_gusts_effect(
@@ -194,4 +198,5 @@ def evaluate_wind(wind_state: WindState, pos: jnp.ndarray) -> jnp.ndarray:
 
 
 evaluate_wind_points = jax.vmap(evaluate_wind, in_axes=(None, 0))
+evaluate_wind_points_history = jax.vmap(evaluate_wind_points, in_axes=(0, None))
 evaluate_wind_grid = jax.jit(jax.vmap(evaluate_wind_points, in_axes=(None, 0)))

@@ -16,8 +16,8 @@ integrate_jit = jax.jit(integrate, static_argnames=["integrator"])
 def test_e2e():
     rng = jax.random.PRNGKey(0)
     sim_state = init_simulation_state(rng=rng)
-    boat_state = sim_state.boat_state
-    boat_state = jax.tree.map(lambda x: x[0], boat_state)
+    boat_state = sim_state.boats_state
+    boat_state = jax.tree.map(lambda x: x[0], boat_state) # Get single boat
     wind_velocity = evaluate_wind(sim_state.wind_state, boat_state.particle_state.x)
 
     dt = 0.1
